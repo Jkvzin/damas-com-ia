@@ -34,7 +34,6 @@ public final class MainInterfaceGrafica extends JFrame {
     private int linhaOrigem = -1, colOrigem = -1;
 
     private int vez = 1; // 1 é vez Branca e 2 é vez Preta
-    private int linhaComer = -1, colComer = -1;
 
     public MainInterfaceGrafica() {
         
@@ -76,14 +75,17 @@ public final class MainInterfaceGrafica extends JFrame {
 
     private void tratarClique(int linha, int col) {
         boolean sucesso = false;
-        boolean obrigadoComer = false;
-
-        for(int i = 0; i < TAMANHO; i++){
-            for(int j = 0; j < TAMANHO; j++){
-                if (tabuleiroLogico.getMatriz()[i][j] % 2 != 0){
-                    podeComer(linha, col);
+        boolean alguemPodeComer = false;
+        for (int i = 0; i < TAMANHO; i++) {
+            for (int j = 0; j < TAMANHO; j++) {
+                if (tabuleiroLogico.getMatriz()[i][j] != 0 && (tabuleiroLogico.getMatriz()[i][j] % 2 == vez % 2)) {
+                    if (temCapturaDisponivel(i, j)) {
+                        alguemPodeComer = true;
+                        break;
+                    }
                 }
             }
+            if (alguemPodeComer) break;
         }
 
         // Caso 1: Nenhuma peça selecionada ainda
@@ -92,10 +94,15 @@ public final class MainInterfaceGrafica extends JFrame {
             // Verifica se a casa clicada contém QUALQUER peça (1, 2, 3 ou 4)
              // adicionei não poder escolher uma casa bege
              // adicionei uma checagem para vez de quem é a vez
-            if ((!obrigadoComer && ((tabuleiroLogico.getMatriz()[linha][col] != 0) && (tabuleiroLogico.getMatriz()[linha][col] != -2) && ((vez % 2) == (tabuleiroLogico.getMatriz()[linha][col] % 2)))) || (obrigadoComer && linha == linhaComer && col == colComer)) {
+            if ((tabuleiroLogico.getMatriz()[linha][col] != 0) && (tabuleiroLogico.getMatriz()[linha][col] != -2) && ((vez % 2) == (tabuleiroLogico.getMatriz()[linha][col] % 2))) {
+            
+                if (alguemPodeComer && !temCapturaDisponivel(linha, col)) {
+                    return; // Sai do método sem selecionar a peça
+                }
+
                 linhaOrigem = linha;
                 colOrigem = col;
-                tabuleiroInterface[linha][col].setBackground(Color.YELLOW); // Destaque do clique
+                tabuleiroInterface[linha][col].setBackground(Color.YELLOW); 
             }
         } 
         // Caso 2: Já existe uma peça selecionada, tentando mover
@@ -107,29 +114,31 @@ public final class MainInterfaceGrafica extends JFrame {
                 return;
             }
 
-            // Verifico se a peça é Branca
-            if(tabuleiroLogico.getMatriz()[linhaOrigem][colOrigem] == 1){
-                //Verifico se a casa escolhida é jogavel
-                if(!obrigadoComer && (linha == (linhaOrigem - 1) && (col == colOrigem + 1 || col == colOrigem - 1))){ // Só pode andar na diagonal pra frente
-                    sucesso = moverPecaLogica(linhaOrigem, colOrigem, linha, col);
+            // Eu pego a distancia entre o clique e a peça selecionada
+            int distLinha = Math.abs(linha - linhaOrigem);
+            int distCol = Math.abs(col - colOrigem);
+            int peca = tabuleiroLogico.getMatriz()[linhaOrigem][colOrigem];
 
-                    //Verifico se a peça está comendo outra peça
-                } else if(obrigadoComer){
-                    tabuleiroLogico.getMatriz()[linhaOrigem - 1][(col + colOrigem) / 2] = 0;
+            // Movimento simples de uma peça comum
+            if (distLinha == 1 && distCol == 1 && !alguemPodeComer) {
+                // Verifico se a peça comum está andando para o lado certo
+                if ((peca == 1 && linha < linhaOrigem) || (peca == 2 && linha > linhaOrigem)) {
                     sucesso = moverPecaLogica(linhaOrigem, colOrigem, linha, col);
                 }
 
-            // Verifico se a peça é Preta
-            } else  if(tabuleiroLogico.getMatriz()[linhaOrigem][colOrigem] == 2){
-                if(!obrigadoComer && (linha == (linhaOrigem + 1) && (col == colOrigem + 1 || col == colOrigem - 1))){ // Só pode andar na diagonal pra frente
-                    sucesso = moverPecaLogica(linhaOrigem, colOrigem, linha, col);
+                //Captura de uma peça
+            } else if (distLinha == 2 && distCol == 2) {
+                int linhaMeio = (linha + linhaOrigem) / 2; // Linha da peça que será comida
+                int colMeio = (col + colOrigem) / 2;     // Coluna da peça que será comida
+                int pecaMeio = tabuleiroLogico.getMatriz()[linhaMeio][colMeio];
 
-                    //Verifico se a peça está comendo outra peça
-                } else if(obrigadoComer){
+                // Verifico se tem inimigo no meio (Branca 1 ou 3 vs Preta 2 ou 4)
+                if (pecaMeio != 0 && (pecaMeio % 2 != peca % 2)) {
                     sucesso = moverPecaLogica(linhaOrigem, colOrigem, linha, col);
-                    tabuleiroLogico.getMatriz()[linhaOrigem + 1][(col + colOrigem) / 2] = 0;
-                    
-                } 
+                    if (sucesso) {
+                        tabuleiroLogico.getMatriz()[linhaMeio][colMeio] = 0; // Removo a peça comida
+                    }
+                }
             }
 
             if (sucesso) {
@@ -150,25 +159,42 @@ public final class MainInterfaceGrafica extends JFrame {
     }
 
     //método que checa se alguma peça é obrigada a comer ou não
-    private boolean podeComer(int linhaOrigem, int colOrigem){
-        int col;
-        //checagem para branca normal
-        if(tabuleiroLogico.getMatriz()[linhaOrigem][colOrigem] == 1){
-            for(col = 1; col < 3; col++){
-                if(tabuleiroLogico.getMatriz()[linhaOrigem - 1][(col + colOrigem) / 2] % 2 == 0){
-                    return true;
-                }
-            }
-            
-            //checagem se é uma preta normal
-        } else if(tabuleiroLogico.getMatriz()[linhaOrigem][colOrigem] == 2){
-            for(col = 1; col < 3; col++){
-                if(tabuleiroLogico.getMatriz()[linhaOrigem + 1][(col + colOrigem) / 2] % 2 == 1){
-                    return true;
+    private boolean temCapturaDisponivel(int linha, int col) {
+        int peca = tabuleiroLogico.getMatriz()[linha][col];
+        if (peca == 0) return false;
+
+        // Sentidos da linha: Branca (1) sobe (-1), Preta (2) desce (+1)
+        int[] sentidosLinha;
+        if (peca <= 2) { 
+            // Peça comum só come para frente
+            sentidosLinha = (peca == 1) ? new int[]{-1} : new int[]{1};
+        } else { 
+            // Dama (3 ou 4) pode comer em ambos os sentidos
+            sentidosLinha = new int[]{-1, 1};
+        }
+
+        for (int dLinha : sentidosLinha) {
+            for (int dCol : new int[]{-1, 1}) { // Esquerda (-1) e Direita (1)
+                int linhaMeio = linha + dLinha;
+                int colMeio = col + dCol;
+                int linhaDestino = linha + (dLinha * 2);
+                int colDestino = col + (dCol * 2);
+
+                // Verifica se o destino está dentro dos limites do tabuleiro
+                if (linhaDestino >= 0 && linhaDestino < TAMANHO && colDestino >= 0 && colDestino < TAMANHO) {
+                    int pecaMeio = tabuleiroLogico.getMatriz()[linhaMeio][colMeio];
+                    int pecaDestino = tabuleiroLogico.getMatriz()[linhaDestino][colDestino];
+
+                    // Regra principal: 
+                    // 1. Tem que ter uma peça no meio (pecaMeio != 0)
+                    // 2. A peça do meio tem que ser do oponente (pecaMeio % 2 != peca % 2)
+                    // 3. A casa de destino tem que estar vazia (pecaDestino == 0)
+                    if (pecaMeio != 0 && (pecaMeio % 2 != peca % 2) && pecaDestino == 0) {
+                        return true;
+                    }
                 }
             }
         }
-
         return false;
     }
 
