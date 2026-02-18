@@ -35,6 +35,8 @@ public final class MainInterfaceGrafica extends JFrame {
 
     private int vez = 1; // 1 é vez Branca e 2 é vez Preta
 
+    private boolean sequenciaCaptura = false;
+
     public MainInterfaceGrafica() {
         
         /*
@@ -76,10 +78,13 @@ public final class MainInterfaceGrafica extends JFrame {
     private void tratarClique(int linha, int col) {
         boolean sucesso = false;
         boolean alguemPodeComer = false;
+
+
+
         for (int i = 0; i < TAMANHO; i++) {
             for (int j = 0; j < TAMANHO; j++) {
                 if (tabuleiroLogico.getMatriz()[i][j] != 0 && (tabuleiroLogico.getMatriz()[i][j] % 2 == vez % 2)) {
-                    if (temCapturaDisponivel(i, j)) {
+                    if (temCapturaDisponivel(i, j, sequenciaCaptura)) {
                         alguemPodeComer = true;
                         break;
                     }
@@ -96,7 +101,7 @@ public final class MainInterfaceGrafica extends JFrame {
              // adicionei uma checagem para vez de quem é a vez
             if ((tabuleiroLogico.getMatriz()[linha][col] != 0) && (tabuleiroLogico.getMatriz()[linha][col] != -2) && ((vez % 2) == (tabuleiroLogico.getMatriz()[linha][col] % 2))) {
             
-                if (alguemPodeComer && !temCapturaDisponivel(linha, col)) {
+                if (alguemPodeComer && !temCapturaDisponivel(linha, col, sequenciaCaptura)) {
                     return; // Sai do método sem selecionar a peça
                 }
 
@@ -108,9 +113,12 @@ public final class MainInterfaceGrafica extends JFrame {
         // Caso 2: Já existe uma peça selecionada, tentando mover
         else {
             
+            
             // Se clicar na mesma peça, cancela a seleção
             if (linhaOrigem == linha && colOrigem == col) {
-                cancelarSelecao();
+                if (!sequenciaCaptura) {
+                    cancelarSelecao();
+                }
                 return;
             }
 
@@ -124,53 +132,128 @@ public final class MainInterfaceGrafica extends JFrame {
                 // Verifico se a peça comum está andando para o lado certo
                 if ((peca == 1 && linha < linhaOrigem) || (peca == 2 && linha > linhaOrigem)) {
                     sucesso = moverPecaLogica(linhaOrigem, colOrigem, linha, col);
+                } else if (peca > 2) { // DAMA: Pode andar várias casas se o caminho estiver vazio
+                    if (caminhoVazio(linhaOrigem, colOrigem, linha, col)) {
+                        sucesso = moverPecaLogica(linhaOrigem, colOrigem, linha, col);
+                    }
                 }
 
                 //Captura de uma peça
-            } else if (distLinha == 2 && distCol == 2) {
-                int linhaMeio = (linha + linhaOrigem) / 2; // Linha da peça que será comida
-                int colMeio = (col + colOrigem) / 2;     // Coluna da peça que será comida
-                int pecaMeio = tabuleiroLogico.getMatriz()[linhaMeio][colMeio];
+            } else if (alguemPodeComer) {
+                if (peca <= 2 && distLinha == 2 && distCol == 2) {
+                    int linhaMeio = (linha + linhaOrigem) / 2; // Linha da peça que será comida
+                    int colMeio = (col + colOrigem) / 2;     // Coluna da peça que será comida
+                    int pecaMeio = tabuleiroLogico.getMatriz()[linhaMeio][colMeio];
 
-                // Verifico se tem inimigo no meio (Branca 1 ou 3 vs Preta 2 ou 4)
-                if (pecaMeio != 0 && (pecaMeio % 2 != peca % 2)) {
-                    sucesso = moverPecaLogica(linhaOrigem, colOrigem, linha, col);
-                    if (sucesso) {
-                        tabuleiroLogico.getMatriz()[linhaMeio][colMeio] = 0; // Removo a peça comida
+                    boolean sentidoValido = true;
+                    if (!sequenciaCaptura) { 
+                        if (peca == 1 && linha > linhaOrigem) sentidoValido = false; 
+                        if (peca == 2 && linha < linhaOrigem) sentidoValido = false; 
                     }
+                    // Verifico se tem inimigo no meio (Branca 1 ou 3 vs Preta 2 ou 4)
+                    if (sentidoValido && pecaMeio != 0 && (pecaMeio % 2 != peca % 2)) {
+                        sucesso = moverPecaLogica(linhaOrigem, colOrigem, linha, col);
+                        if (sucesso) {
+                            tabuleiroLogico.getMatriz()[linhaMeio][colMeio] = 0;
+                        }
+                    }
+                }  else if (peca > 2) {
+                    sucesso = tentarCapturaDama(linhaOrigem, colOrigem, linha, col);
                 }
             }
 
             if (sucesso) {
                 cancelarSelecao();
+
                 sincronizarInterface();
+
+                verificarFimDeJogo();
+
+                boolean foiCaptura = (distLinha > 1);
 
                 /*
                     VERIFICAÇÃO DE QUEM É A VEZ DE JOGAR E IMPLEMENTAÇÃO DA JOGADA DA IA
                 */
-               vez = 1 - vez;
+
+                if (foiCaptura && temCapturaDisponivel(linha, col, true)) { 
+                    sequenciaCaptura = true;
+                    linhaOrigem = linha; 
+                    colOrigem = col;
+                    tabuleiroInterface[linhaOrigem][colOrigem].setBackground(Color.YELLOW);
+                } else {
+                    vez = (vez == 1) ? 2 : 1; 
+                    sequenciaCaptura = false; 
+                }
+               
             } else {
                 // Se o movimento for inválido (ex: clicar em cima de outra peça)
-                cancelarSelecao();
+                if (!sequenciaCaptura) {
+                    cancelarSelecao();
+                }
             }
 
             
         }
     }
 
+    private void verificarFimDeJogo() {
+        int brancas = 0, pretas = 0;
+        for (int i = 0; i < TAMANHO; i++) {
+            for (int j = 0; j < TAMANHO; j++) {
+                int p = tabuleiroLogico.getMatriz()[i][j];
+                if (p == 1 || p == 3) brancas++;
+                if (p == 2 || p == 4) pretas++;
+            }
+        }
+        if (brancas == 0) {
+            JOptionPane.showMessageDialog(this, "FIM DE JOGO! As Pretas venceram!");
+        } else if (pretas == 0) {
+            JOptionPane.showMessageDialog(this, "FIM DE JOGO! As Brancas venceram!");
+        }
+    }
+
     //método que checa se alguma peça é obrigada a comer ou não
-    private boolean temCapturaDisponivel(int linha, int col) {
+    private boolean temCapturaDisponivel(int linha, int col, boolean emSequencia) {
         int peca = tabuleiroLogico.getMatriz()[linha][col];
         if (peca == 0) return false;
 
         // Sentidos da linha: Branca (1) sobe (-1), Preta (2) desce (+1)
         int[] sentidosLinha;
-        if (peca <= 2) { 
-            // Peça comum só come para frente
-            sentidosLinha = (peca == 1) ? new int[]{-1} : new int[]{1};
-        } else { 
-            // Dama (3 ou 4) pode comer em ambos os sentidos
+
+        // Se for Dama (3 ou 4) sempre come para todos os lados
+        if (peca > 2) {
             sentidosLinha = new int[]{-1, 1};
+
+            for (int dL : new int[]{-1, 1}) {
+                for (int dC : new int[]{-1, 1}) {
+                    // Varre a diagonal
+                    for (int i = 1; i < TAMANHO; i++) {
+                        int rInimigo = linha + (dL * i);
+                        int cInimigo = col + (dC * i);
+                        int rDestino = rInimigo + dL;
+                        int cDestino = cInimigo + dC;
+
+                        // Se sair do tabuleiro, para
+                        if (rDestino < 0 || rDestino >= TAMANHO || cDestino < 0 || cDestino >= TAMANHO) break;
+
+                        int pecaNoCaminho = tabuleiroLogico.getMatriz()[rInimigo][cInimigo];
+                        if (pecaNoCaminho != 0) {
+                            // Se encontrar peça própria, essa diagonal está bloqueada
+                            if (pecaNoCaminho % 2 == peca % 2) break;
+                            // Se encontrar inimiga, vê se a próxima casa está vazia
+                            if (tabuleiroLogico.getMatriz()[rDestino][cDestino] == 0) return true;
+                            else break; // Bloqueado por outra peça atrás da inimiga
+                        }
+                    }
+                }
+            }
+        } 
+        // Agora usamos o parâmetro 'emSequencia' em vez da variável global direta
+        else if (emSequencia) {
+            sentidosLinha = new int[]{-1, 1};
+        } 
+        else {
+            sentidosLinha = (peca == 1) ? new int[]{-1} : new int[]{1};
         }
 
         for (int dLinha : sentidosLinha) {
@@ -197,6 +280,65 @@ public final class MainInterfaceGrafica extends JFrame {
         }
         return false;
     }
+
+    //verificação para saber se  o caminho de uma dama está vazio ou se tem uma peça no meio
+    private boolean caminhoVazio(int r1, int c1, int r2, int c2) {
+        int dirLinha = (r2 > r1) ? 1 : -1;
+        int dirCol = (c2 > c1) ? 1 : -1;
+        int r = r1 + dirLinha;
+        int c = c1 + dirCol;
+
+        while (r != r2 && c != c2) {
+            if (tabuleiroLogico.getMatriz()[r][c] != 0) {
+                return false; // Encontrou um obstáculo
+            }
+            r += dirLinha;
+            c += dirCol;
+        }
+        return true;
+    }
+
+                                        //1 = origem; 2 = novo
+    private boolean tentarCapturaDama(int r1, int c1, int r2, int c2) {
+        int dirLinha = (r2 > r1) ? 1 : -1;
+        int dirCol = (c2 > c1) ? 1 : -1;
+        int pecaInimigaLinha = -1;
+        int pecaInimigaCol = -1;
+        int contadorInimigos = 0;
+
+        int r = r1 + dirLinha;
+        int c = c1 + dirCol;
+
+        while (r != r2) {
+            int pecaNoCaminho = tabuleiroLogico.getMatriz()[r][c];
+            if (pecaNoCaminho != 0) {
+                // Verifica se é peça do próprio time
+                if (pecaNoCaminho % 2 == tabuleiroLogico.getMatriz()[r1][c1] % 2) return false;
+                
+                contadorInimigos++;
+                pecaInimigaLinha = r;
+                pecaInimigaCol = c;
+            }
+            r += dirLinha;
+            c += dirCol;
+        }
+
+        // tem que ter exatamente uma peça inimiga no caminho
+        if (contadorInimigos == 1) {
+            int rAposInimiga = pecaInimigaLinha + dirLinha;
+            int cAposInimiga = pecaInimigaCol + dirCol;
+
+            if (r2 == rAposInimiga && c2 == cAposInimiga) {
+                if (moverPecaLogica(r1, c1, r2, c2)) {
+                    tabuleiroLogico.getMatriz()[pecaInimigaLinha][pecaInimigaCol] = 0;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+
 
     private void cancelarSelecao() {
         if (linhaOrigem != -1) {
