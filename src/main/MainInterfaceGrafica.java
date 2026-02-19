@@ -84,7 +84,7 @@ public final class MainInterfaceGrafica extends JFrame {
         //sempre verifico se tem alguma captura obrigatória
         for (int i = 0; i < TAMANHO; i++) {
             for (int j = 0; j < TAMANHO; j++) {
-                if ((tabuleiroLogico.getMatriz()[i][j] != 0) && (tabuleiroLogico.getMatriz()[i][j] != 5) && (tabuleiroLogico.getMatriz()[i][j] % 2 == vez % 2)) {
+                if ((tabuleiroLogico.getMatriz()[i][j] != 0) && (tabuleiroLogico.getMatriz()[i][j] != 'b') && (tabuleiroLogico.getMatriz()[i][j] % 2 == vez % 2)) {
                     if (temCapturaDisponivel(i, j, sequenciaCaptura)) {
                         alguemPodeComer = true;
                         break;
@@ -100,7 +100,7 @@ public final class MainInterfaceGrafica extends JFrame {
             // Verifica se a casa clicada contém QUALQUER peça (1, 2, 3 ou 4)
              // adicionei não poder escolher uma casa bege
              // adicionei uma checagem para vez de quem é a vez
-            if ((tabuleiroLogico.getMatriz()[linha][col] != 0) && (tabuleiroLogico.getMatriz()[linha][col] != 5) && ((vez % 2) == (tabuleiroLogico.getMatriz()[linha][col] % 2))) {
+            if ((tabuleiroLogico.getMatriz()[linha][col] != 0) && (tabuleiroLogico.getMatriz()[linha][col] != 'b') && ((vez % 2) == (tabuleiroLogico.getMatriz()[linha][col] % 2))) {
             
                 if (alguemPodeComer && !temCapturaDisponivel(linha, col, sequenciaCaptura)) {
                     return; // Sai do método sem selecionar a peça
@@ -418,7 +418,7 @@ public final class MainInterfaceGrafica extends JFrame {
             }
 
             // Representação de Dama (uma borda dourada)
-            if (tipoPeca > 2) { 
+            if (tipoPeca > 2 && tipoPeca != 'b') { 
                 g2.setColor(Color.YELLOW);
                 g2.setStroke(new BasicStroke(3));
                 g2.drawOval(margem + 5, margem + 5, getWidth() - 2 * margem - 10, getHeight() - 2 * margem - 10);

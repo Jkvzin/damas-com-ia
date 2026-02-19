@@ -29,7 +29,7 @@ public class Tabuleiro implements Cloneable {
                         matriz[i][j] = 1; // Brancas
                     }
                 } else {
-                    matriz[i][j] = 5; // Espaço Branco
+                    matriz[i][j] = 'b'; // Espaço Branco
                 }
             }
         }
