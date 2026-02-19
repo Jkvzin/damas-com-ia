@@ -11,11 +11,11 @@ package main;
  */
 public class Tabuleiro implements Cloneable {
 
-    private int[][] matriz;
+    private char[][] matriz;
     private final int TAMANHO = 6;
 
     public Tabuleiro() {
-        this.matriz = new int[TAMANHO][TAMANHO];
+        this.matriz = new char[TAMANHO][TAMANHO];
         inicializar();
     }
 
@@ -29,7 +29,7 @@ public class Tabuleiro implements Cloneable {
                         matriz[i][j] = 1; // Brancas
                     }
                 } else {
-                    matriz[i][j] = -2; // Espaço Branco
+                    matriz[i][j] = 5; // Espaço Branco
                 }
             }
         }
@@ -39,7 +39,7 @@ public class Tabuleiro implements Cloneable {
     public Tabuleiro clone() {
         try {
             Tabuleiro clone = (Tabuleiro) super.clone();
-            clone.matriz = new int[TAMANHO][];
+            clone.matriz = new char[TAMANHO][];
             for (int i = 0; i < TAMANHO; i++) {
                 clone.matriz[i] = this.matriz[i].clone();
             }
@@ -53,11 +53,11 @@ public class Tabuleiro implements Cloneable {
         Implmentação dos métodos - getMovimentosPossiveis(), fazerMovimento(), etc
     */
 
-    public int[][] getMatriz() {
+    public char[][] getMatriz() {
         return matriz;
     }
 
-    public void setMatriz(int[][] matriz) {
+    public void setMatriz(char[][] matriz) {
         this.matriz = matriz;
     }
 }
