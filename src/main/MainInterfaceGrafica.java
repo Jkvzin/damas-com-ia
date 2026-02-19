@@ -80,7 +80,8 @@ public final class MainInterfaceGrafica extends JFrame {
         boolean alguemPodeComer = false;
 
 
-
+        //Verifico se tem alguma captura disponivel para as peças da cor de quem for a vez pra saber se é obrigado a capturar ou não
+        //sempre verifico se tem alguma captura obrigatória
         for (int i = 0; i < TAMANHO; i++) {
             for (int j = 0; j < TAMANHO; j++) {
                 if ((tabuleiroLogico.getMatriz()[i][j] != 0) && (tabuleiroLogico.getMatriz()[i][j] != -2) && (tabuleiroLogico.getMatriz()[i][j] % 2 == vez % 2)) {
