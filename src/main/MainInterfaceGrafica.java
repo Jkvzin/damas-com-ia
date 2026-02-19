@@ -281,6 +281,7 @@ public final class MainInterfaceGrafica extends JFrame {
     }
 
     //verificação para saber se  o caminho de uma dama está vazio ou se tem uma peça no meio
+                                //1 = origem; 2 = novo
     private boolean caminhoVazio(int r1, int c1, int r2, int c2) {
         int dirLinha = (r2 > r1) ? 1 : -1;
         int dirCol = (c2 > c1) ? 1 : -1;
