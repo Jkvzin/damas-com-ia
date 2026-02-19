@@ -83,7 +83,7 @@ public final class MainInterfaceGrafica extends JFrame {
 
         for (int i = 0; i < TAMANHO; i++) {
             for (int j = 0; j < TAMANHO; j++) {
-                if (tabuleiroLogico.getMatriz()[i][j] != 0 && (tabuleiroLogico.getMatriz()[i][j] % 2 == vez % 2)) {
+                if ((tabuleiroLogico.getMatriz()[i][j] != 0) && (tabuleiroLogico.getMatriz()[i][j] != -2) && (tabuleiroLogico.getMatriz()[i][j] % 2 == vez % 2)) {
                     if (temCapturaDisponivel(i, j, sequenciaCaptura)) {
                         alguemPodeComer = true;
                         break;
@@ -226,7 +226,7 @@ public final class MainInterfaceGrafica extends JFrame {
 
             for (int dL : new int[]{-1, 1}) {
                 for (int dC : new int[]{-1, 1}) {
-                    // Varre a diagonal
+                    // Varro a diagonal
                     for (int i = 1; i < TAMANHO; i++) {
                         int rInimigo = linha + (dL * i);
                         int cInimigo = col + (dC * i);
@@ -238,7 +238,7 @@ public final class MainInterfaceGrafica extends JFrame {
 
                         int pecaNoCaminho = tabuleiroLogico.getMatriz()[rInimigo][cInimigo];
                         if (pecaNoCaminho != 0) {
-                            // Se encontrar peça própria, essa diagonal está bloqueada
+                            // Se encontrar peça da mesma cor, essa diagonal está bloqueada
                             if (pecaNoCaminho % 2 == peca % 2) break;
                             // Se encontrar inimiga, vê se a próxima casa está vazia
                             if (tabuleiroLogico.getMatriz()[rDestino][cDestino] == 0) return true;
@@ -248,7 +248,6 @@ public final class MainInterfaceGrafica extends JFrame {
                 }
             }
         } 
-        // Agora usamos o parâmetro 'emSequencia' em vez da variável global direta
         else if (emSequencia) {
             sentidosLinha = new int[]{-1, 1};
         } 
@@ -269,9 +268,9 @@ public final class MainInterfaceGrafica extends JFrame {
                     int pecaDestino = tabuleiroLogico.getMatriz()[linhaDestino][colDestino];
 
                     // Regra principal: 
-                    // 1. Tem que ter uma peça no meio (pecaMeio != 0)
-                    // 2. A peça do meio tem que ser do oponente (pecaMeio % 2 != peca % 2)
-                    // 3. A casa de destino tem que estar vazia (pecaDestino == 0)
+                    // Tem que ter uma peça no meio (pecaMeio != 0)
+                    // A peça do meio tem que ser do oponente (pecaMeio % 2 != peca % 2)
+                    // A casa de destino tem que estar vazia (pecaDestino == 0)
                     if (pecaMeio != 0 && (pecaMeio % 2 != peca % 2) && pecaDestino == 0) {
                         return true;
                     }
@@ -312,7 +311,7 @@ public final class MainInterfaceGrafica extends JFrame {
         while (r != r2) {
             int pecaNoCaminho = tabuleiroLogico.getMatriz()[r][c];
             if (pecaNoCaminho != 0) {
-                // Verifica se é peça do próprio time
+                // Verifico se é peça do próprio time
                 if (pecaNoCaminho % 2 == tabuleiroLogico.getMatriz()[r1][c1] % 2) return false;
                 
                 contadorInimigos++;
@@ -358,7 +357,7 @@ public final class MainInterfaceGrafica extends JFrame {
             tabuleiroLogico.getMatriz()[r2][c2] = tabuleiroLogico.getMatriz()[r1][c1];
             tabuleiroLogico.getMatriz()[r1][c1] = 0;
 
-            // Promoção simples para Dama (opcional)
+            // Promoção simples para Dama 
             if (tabuleiroLogico.getMatriz()[r2][c2] == 2 && r2 == 5) {
                 tabuleiroLogico.getMatriz()[r2][c2] = 4;
             }
