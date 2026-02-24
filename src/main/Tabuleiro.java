@@ -23,10 +23,13 @@ public class Tabuleiro implements Cloneable {
         for (int i = 0; i < TAMANHO; i++) {
             for (int j = 0; j < TAMANHO; j++) {
                 if ((i + j) % 2 != 0) {
+
+                    matriz[i][j] = '0';
+                    
                     if (i < 2) {
-                        matriz[i][j] = 2; // Pretas
+                        matriz[i][j] = '2'; // Pretas
                     } else if (i > 3) {
-                        matriz[i][j] = 1; // Brancas
+                        matriz[i][j] = '1'; // Brancas
                     }
                 } else {
                     matriz[i][j] = 'b'; // Espaço Branco
