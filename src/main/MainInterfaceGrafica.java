@@ -3,10 +3,32 @@ package main;
 import javax.swing.*;
 import java.awt.*;
 
+/**
+ *
+ * @author Douglas
+ */
 public final class MainInterfaceGrafica extends JFrame {
 
     private final int TAMANHO = 6;
     private final CasaBotao[][] tabuleiroInterface = new CasaBotao[TAMANHO][TAMANHO];
+    
+    /*  
+        Vazio: 0
+        Brancas: 1
+        Pretas: 2
+        Damas: 3 (branca) ou 4 (preta)
+
+        - Definir quem utilizará as peças brancas
+        - Obrigatório comer a peça
+        - Não é permitido comer pra trás
+        - Uma peça comum pode comer múltiplas peças em qualquer direção, desde que a primeira seja para frente
+        - A dama pode andar infinitas casas
+        - A dama pode comer pra trás
+        - A dama pode comer multiplas peças
+        - A última peça a comida pela dama indica a posição que a dama deverá parar (posição subsequente na direção da comida)
+
+
+    */
     
     private final Tabuleiro tabuleiroLogico; 
 
@@ -14,14 +36,20 @@ public final class MainInterfaceGrafica extends JFrame {
     private int vez = 1; // 1 é vez Branca e 2 é vez Preta
     private boolean sequenciaCaptura = false;
 
+    private int[] pecas = new int[]{0, TAMANHO, TAMANHO}; // a primeira posicao é ignoravel pra facilitar depois
+    private int[] damas = new int[]{0, 0, 0};
+
     public MainInterfaceGrafica() {
+        
+        /*
+            TABULEIRO DO JOGO
+        */
         tabuleiroLogico = new Tabuleiro();
 
         setTitle("DISCIPLINA - IA - MINI JOGO DE DAMA");
         setSize(800, 800);
         setLayout(new GridLayout(TAMANHO, TAMANHO));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setResizable(false);
 
         inicializarComponentes();
         sincronizarInterface(); 
@@ -34,6 +62,7 @@ public final class MainInterfaceGrafica extends JFrame {
             for (int j = 0; j < TAMANHO; j++) {
                 tabuleiroInterface[i][j] = new CasaBotao();
 
+                // Cores do tabuleiro
                 if ((i + j) % 2 == 0) {
                     tabuleiroInterface[i][j].setBackground(new Color(235, 235, 208)); // Bege
                 } else {
@@ -122,6 +151,12 @@ public final class MainInterfaceGrafica extends JFrame {
                         if (sentidoValido && pecaMeio != '0' && pecaMeio != 'b' && (pecaMeio % 2 != peca % 2)) {
                             sucesso = moverPecaLogica(linhaOrigem, colOrigem, linha, col);
                             if (sucesso) {
+                                if(tabuleiroLogico.getMatriz()[linhaMeio][colMeio] <= 2){
+                                    pecas[tabuleiroLogico.getMatriz()[linhaMeio][colMeio]]--;
+                                } else {
+                                    damas[tabuleiroLogico.getMatriz()[linhaMeio][colMeio]]--;
+                                    pecas[tabuleiroLogico.getMatriz()[linhaMeio][colMeio] - 2]--;
+                                }
                                 tabuleiroLogico.getMatriz()[linhaMeio][colMeio] = '0';
                                 realizouCaptura = true; // Confirma que uma peça foi comida
                             }
@@ -139,13 +174,19 @@ public final class MainInterfaceGrafica extends JFrame {
                                 if (pecaMeio != '0' && pecaMeio != 'b' && (pecaMeio % 2 != peca % 2)) {
                                     sucesso = moverPecaLogica(linhaOrigem, colOrigem, linha, col);
                                     if (sucesso) {
+                                        if(tabuleiroLogico.getMatriz()[linhaMeio][colMeio] <= 2){
+                                            pecas[tabuleiroLogico.getMatriz()[linhaMeio][colMeio]]--;
+                                        } else {
+                                            damas[tabuleiroLogico.getMatriz()[linhaMeio][colMeio]]--;
+                                            pecas[tabuleiroLogico.getMatriz()[linhaMeio][colMeio] - 2]--;
+                                        }
                                         tabuleiroLogico.getMatriz()[linhaMeio][colMeio] = '0';
                                         realizouCaptura = true;
                                     }
                                 }
                             }
                         } else {
-                            // PRIMEIRA CAPTURA: Pode voar (distância livre)
+                            // Primeira captura é distancia livre pra dama
                             if (distLinha > 1) {
                                 sucesso = tentarCapturaDama(linhaOrigem, colOrigem, linha, col);
                                 if (sucesso) {
@@ -183,17 +224,9 @@ public final class MainInterfaceGrafica extends JFrame {
     }
 
     private void verificarFimDeJogo() {
-        int brancas = 0, pretas = 0;
-        for (int i = 0; i < TAMANHO; i++) {
-            for (int j = 0; j < TAMANHO; j++) {
-                char p = tabuleiroLogico.getMatriz()[i][j];
-                if (p == '1' || p == '3') brancas++;
-                if (p == '2' || p == '4') pretas++;
-            }
-        }
-        if (brancas == 0) {
+        if (pecas[1] == 0) {
             JOptionPane.showMessageDialog(this, "FIM DE JOGO! As Pretas venceram!");
-        } else if (pretas == 0) {
+        } else if (pecas[2] == 0) {
             JOptionPane.showMessageDialog(this, "FIM DE JOGO! As Brancas venceram!");
         }
     }
@@ -344,6 +377,7 @@ public final class MainInterfaceGrafica extends JFrame {
 
     private void cancelarSelecao() {
         if (linhaOrigem != -1) {
+            // Restaura a cor original
             tabuleiroInterface[linhaOrigem][colOrigem].setBackground(new Color(119, 149, 86));
         }
         linhaOrigem = -1;
@@ -351,15 +385,21 @@ public final class MainInterfaceGrafica extends JFrame {
     }
 
     private boolean moverPecaLogica(int r1, int c1, int r2, int c2) {
-        if (tabuleiroLogico.getMatriz()[r2][c2] == '0') {
+        
+        // A casa de destino deve estar vazia
+        if (tabuleiroLogico.getMatriz()[r2][c2] == 0) {
+            
+            // Transfere o valor (seja 1, 2, 3 ou 4) para a nova posição
             tabuleiroLogico.getMatriz()[r2][c2] = tabuleiroLogico.getMatriz()[r1][c1];
-            tabuleiroLogico.getMatriz()[r1][c1] = '0';
+            tabuleiroLogico.getMatriz()[r1][c1] = 0;
 
-            // Promoção para Dama usando a variável TAMANHO (evita hardcode = 5)
-            if (tabuleiroLogico.getMatriz()[r2][c2] == '2' && r2 == TAMANHO - 1) {
+            // Promoção simples para Dama 
+            if (tabuleiroLogico.getMatriz()[r2][c2] == '2' && r2 == 5) {
+                damas[2]++;
                 tabuleiroLogico.getMatriz()[r2][c2] = '4';
             }
             if (tabuleiroLogico.getMatriz()[r2][c2] == '1' && r2 == 0) {
+                damas[1]++;
                 tabuleiroLogico.getMatriz()[r2][c2] = '3';
             }
 
@@ -372,6 +412,10 @@ public final class MainInterfaceGrafica extends JFrame {
         SwingUtilities.invokeLater(MainInterfaceGrafica::new);
     }
     
+    /*
+     * Atualiza a interface gráfica com base na matriz lógica do Tabuleiro. Este
+     * método será chamado após cada jogada da IA.
+     */
     public void sincronizarInterface() {
         for (int i = 0; i < TAMANHO; i++) {
             for (int j = 0; j < TAMANHO; j++) {
@@ -382,7 +426,8 @@ public final class MainInterfaceGrafica extends JFrame {
     }
 
     private class CasaBotao extends JButton {
-        private int tipoPeca = 0;
+
+        private int tipoPeca = '0';
 
         public void setTipoPeca(int tipo) {
             this.tipoPeca = tipo;
@@ -396,16 +441,19 @@ public final class MainInterfaceGrafica extends JFrame {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
             int margem = 10;
+            // Brancas
             if (tipoPeca == '1' || tipoPeca == '3') { 
                 g2.setColor(Color.WHITE);
                 g2.fillOval(margem, margem, getWidth() - 2 * margem, getHeight() - 2 * margem);
                 g2.setColor(Color.BLACK);
                 g2.drawOval(margem, margem, getWidth() - 2 * margem, getHeight() - 2 * margem);
+            // Pretas
             } else if (tipoPeca == '2' || tipoPeca == '4') { 
                 g2.setColor(Color.BLACK);
                 g2.fillOval(margem, margem, getWidth() - 2 * margem, getHeight() - 2 * margem);
             }
 
+            // Representação de Dama (uma borda dourada)
             if (tipoPeca > '2' && tipoPeca != 'b') { 
                 g2.setColor(Color.YELLOW);
                 g2.setStroke(new BasicStroke(3));
