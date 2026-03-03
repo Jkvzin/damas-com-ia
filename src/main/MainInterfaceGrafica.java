@@ -47,6 +47,7 @@ public final class MainInterfaceGrafica extends JFrame {
         setSize(800, 800);
         setLayout(new GridLayout(TAMANHO, TAMANHO));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setResizable(false);
 
         inicializarComponentes();
         sincronizarInterface();
@@ -73,41 +74,9 @@ public final class MainInterfaceGrafica extends JFrame {
             }
         }
 
-        /*
-         * CRIAÇÃO DA ÁRVORE
-         * 
-         * - PARA O ESTADO DO TABULEIRO, VERIFICAR JOGADAS POSSÍVEIS;
-         * - PARA CADA JOGADA POSSÍVEL, CRIA UM NOVO NÓ;
-         * - ADICIONAMOS OS NÓS NA ÁRVORE;
-         * - ENTRAMOS RECURSIVAMENTE NOS NÓS FILHOS;
-         * 
-         * Node arvore = new Node();
-         * this.montarArvoreIA(arvore, profundidade, '1');
-         * 
-         * ArrayList<Jogada> jogadasPossiveis = retornaJogadasPossiveis(tabuleiroLogico,
-         * '1');
-         * for (Jogada jogada : jogadasPossiveis) {
-         * Node no = new Node();
-         * no.setOrigem(jogada.getOrigem());
-         * no.setDest(jogada.getDestino());
-         * no.setMatriz(tabuleiroLogico.clone().getMatriz());
-         * no.setTurn(true);
-         * arvore.getChildren().add(no);
-         * }
-         */
+        
     }
 
-    /*
-     * 1. Se não tem peça selecionada:
-     * a. Verifica se alguem pode comer
-     * b. Se sim, só pode selecionar peças que podem comer
-     * c. Se não, pode selecionar qualquer peça
-     * d. Seleciona a peça
-     * 2. Se tem peça selecionada:
-     * a. Verifica se é uma jogada valida
-     * b. Se sim, executa a jogada
-     * c. Se não, cancela a seleção
-     */
     private void tratarClique(int linha, int col) {
         boolean sucesso = false;
         boolean realizouCaptura = false;
@@ -166,7 +135,6 @@ public final class MainInterfaceGrafica extends JFrame {
                         }
                     }
                 } else {
-                    // Lógica de captura totalmente blindada
                     if (peca <= '2' && distLinha == 2) {
                         // Peça comum comendo
                         int linhaMeio = (linha + linhaOrigem) / 2;
@@ -190,7 +158,7 @@ public final class MainInterfaceGrafica extends JFrame {
                     } else if (peca > '2') {
                         // Tratamento diferenciado da Dama
                         if (sequenciaCaptura) {
-                            // DAMA EM COMBO: Só pode comer peça adjacente (igual peça comum)
+                            // Em combo só pode comer peça adjacente
                             if (distLinha == 2) {
                                 int linhaMeio = (linha + linhaOrigem) / 2;
                                 int colMeio = (col + colOrigem) / 2;
@@ -228,7 +196,7 @@ public final class MainInterfaceGrafica extends JFrame {
                 sincronizarInterface();
                 verificarFimDeJogo();
 
-                // Verifica se pode continuar comendo (combo)
+                // Verifica se pode continuar comendo
                 if (realizouCaptura && RegrasDamas.temCapturaDisponivel(tabuleiroLogico, linha, col, true)) {
                     sequenciaCaptura = true;
                     linhaOrigem = linha;
@@ -238,17 +206,8 @@ public final class MainInterfaceGrafica extends JFrame {
                     vez = (vez == 1) ? 2 : 1;
                     sequenciaCaptura = false;
 
-                    // NA IMPOSSIBILIDADE DE EFETUAR JOGADAS, O JOGADOR TRAVADO PERDE O JOGO
-                    if (!RegrasDamas.temMovimentoDisponivel(tabuleiroLogico, vez)) {
-                        String vencedor = (vez == 1) ? "Pretas" : "Brancas";
-                        JOptionPane.showMessageDialog(this,
-                                "FIM DE JOGO! As " + vencedor + " venceram! (adversário bloqueado)");
-                    }
+                    
                 }
-
-                /*
-                 * VERIFICAÇÃO DE QUEM É A VEZ DE JOGAR E IMPLEMENTAÇÃO DA JOGADA DA IA
-                 */
 
             } else {
                 // Se o movimento for inválido (ex: clicar em cima de outra peça)
@@ -265,6 +224,13 @@ public final class MainInterfaceGrafica extends JFrame {
             JOptionPane.showMessageDialog(this, "FIM DE JOGO! As Pretas venceram!");
         } else if (pecas[2] == 0) {
             JOptionPane.showMessageDialog(this, "FIM DE JOGO! As Brancas venceram!");
+        }
+
+        // Se o jogador estiver travado ele perde
+        if (!RegrasDamas.temMovimentoDisponivel(tabuleiroLogico, vez)) {
+            String vencedor = (vez == 1) ? "Pretas" : "Brancas";
+            JOptionPane.showMessageDialog(this,
+                    "FIM DE JOGO! As " + vencedor + " venceram! (adversário bloqueado)");
         }
     }
 

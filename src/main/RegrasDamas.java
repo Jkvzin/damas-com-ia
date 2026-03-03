@@ -1,10 +1,5 @@
 package main;
 
-/**
- * Classe responsável por toda a lógica de regras do jogo de damas.
- * Todos os métodos são estáticos e recebem o Tabuleiro como parâmetro,
- * sem depender de estado da GUI.
- */
 public class RegrasDamas {
 
     private static final int TAMANHO = 6;

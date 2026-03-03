@@ -12,8 +12,9 @@ public class Node {
     private ArrayList<Node> children;
 
     public Node() {
-
+        children = new ArrayList<>();
     }
+    
 
     public ArrayList<Node> getChildren() {
         return children;
@@ -39,8 +40,8 @@ public class Node {
         return turn;
     }
 
-    public void setChildren(ArrayList<Node> children) {
-        this.children = children;
+    public void setChildren(Node child) {
+        this.children.add(child);
     }
 
     public void setDest(char dest) {
