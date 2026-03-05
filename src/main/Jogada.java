@@ -13,18 +13,22 @@ import java.util.Map;
  * 5 P . Q . R .
  */
 
-
 class Posicao {
     private final int linha;
     private final int coluna;
 
-    public Posicao (int linha, int coluna){
+    public Posicao(int linha, int coluna) {
         this.linha = linha;
         this.coluna = coluna;
     }
 
-    public int getLinha() { return linha; }
-    public int getColuna() { return coluna; }
+    public int getLinha() {
+        return linha;
+    }
+
+    public int getColuna() {
+        return coluna;
+    }
 }
 
 public class Jogada {
@@ -112,7 +116,6 @@ public class Jogada {
     public void setProximaCaptura(Jogada proximaCaptura) {
         this.proximaCaptura = proximaCaptura;
     }
-
 
     /**
      * Retorna a jogada como string de 2 caracteres, ex: "DG".

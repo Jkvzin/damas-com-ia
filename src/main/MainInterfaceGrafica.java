@@ -35,6 +35,7 @@ public final class MainInterfaceGrafica extends JFrame {
     private int linhaOrigem = -1, colOrigem = -1;
     private int vez = 1; // 1 é vez Branca e 2 é vez Preta
     private boolean sequenciaCaptura = false;
+    private boolean vezIA = true; // true = IA está ativada (joga como pretas)
 
     public MainInterfaceGrafica() {
 
@@ -74,9 +75,19 @@ public final class MainInterfaceGrafica extends JFrame {
             }
         }
 
-        
     }
 
+    /*
+     * 1. Se não tem peça selecionada:
+     * a. Verifica se alguem pode comer
+     * b. Se sim, só pode selecionar peças que podem comer
+     * c. Se não, pode selecionar qualquer peça
+     * d. Seleciona a peça
+     * 2. Se tem peça selecionada:
+     * a. Verifica se é uma jogada valida
+     * b. Se sim, executa a jogada
+     * c. Se não, cancela a seleção
+     */
     private void tratarClique(int linha, int col) {
         boolean sucesso = false;
         boolean realizouCaptura = false;
@@ -206,7 +217,20 @@ public final class MainInterfaceGrafica extends JFrame {
                     vez = (vez == 1) ? 2 : 1;
                     sequenciaCaptura = false;
 
-                    
+                    // Se for a vez da IA, constrói a árvore e calcula possibilidades
+                    if (vezIA) {
+                        System.out.println("\n=== VEZ DA IA ===");
+                        long inicio = System.currentTimeMillis();
+                        Arvore arvore = new Arvore(tabuleiroLogico.clone(), false); // false = pretas
+                        long fim = System.currentTimeMillis();
+
+                        int totalNos = contarNos(arvore.getRaiz());
+                        System.out.println("Profundidade máxima: " + arvore.getProfundidadeMaxima());
+                        System.out.println("Total de nós (possibilidades): " + totalNos);
+                        System.out.println("Filhos diretos da raiz: " + arvore.getRaiz().getChildren().size());
+                        System.out.println("Tempo de construção: " + (fim - inicio) + " ms");
+                        System.out.println("==================\n");
+                    }
                 }
 
             } else {
@@ -266,6 +290,14 @@ public final class MainInterfaceGrafica extends JFrame {
             return true;
         }
         return false;
+    }
+
+    private static int contarNos(Node node) {
+        int count = 1;
+        for (Node filho : node.getChildren()) {
+            count += contarNos(filho);
+        }
+        return count;
     }
 
     private void cancelarSelecao() {
