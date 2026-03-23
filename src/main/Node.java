@@ -11,10 +11,28 @@ public class Node {
     private int miniMax;
     private ArrayList<Node> children;
 
+    /*
+     * minimax
+     * 0 empate
+     * 1 vitória
+     * -1 derrota
+     * 
+     * vitória + 100
+     * derrota - 100
+     * empate -1
+     * dama + 2
+     * normal + 1
+     * se é vezIA e temCapturaDisponivel + 1
+     * // // // // e combo possivel + (tamanho do combo)
+     * //
+     * 
+     * turn - maximizar ou minimizar o valor do minimax dos filhos
+     */
+
     public Node() {
         children = new ArrayList<>();
+        miniMax = Integer.MIN_VALUE;
     }
-    
 
     public ArrayList<Node> getChildren() {
         return children;
