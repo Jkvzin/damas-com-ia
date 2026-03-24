@@ -91,7 +91,8 @@ public final class MainInterfaceGrafica extends JFrame {
      */
     private void tratarClique(int linha, int col) {
         // Bloqueia cliques do humano enquanto a IA pensa (Thread paralela)
-        if (vezIA && vez == corIA) return;
+        if (vezIA && vez == corIA)
+            return;
 
         boolean sucesso = false;
         boolean realizouCaptura = false;
@@ -225,11 +226,12 @@ public final class MainInterfaceGrafica extends JFrame {
                     if (vezIA && vez == corIA) {
                         System.out.println("\n=== VEZ DA IA ===");
                         setTitle("DISCIPLINA - IA - MINI JOGO DE DAMA (A IA está pensando...)");
-                        
+
                         // Roda a inteligência numa Thread paralela pra não travar a tela (EDT)
                         new Thread(() -> {
                             long inicio = System.currentTimeMillis();
-                            Arvore arvore = new Arvore(tabuleiroLogico.clone(), corIA); // A IA agora funciona pra qualquer lado
+                            Arvore arvore = new Arvore(tabuleiroLogico.clone(), corIA); // A IA agora funciona pra
+                                                                                        // qualquer lado
                             long fim = System.currentTimeMillis();
 
                             int totalNos = contarNos(arvore.getRaiz());
@@ -237,7 +239,7 @@ public final class MainInterfaceGrafica extends JFrame {
                             System.out.println("Total de nós (possibilidades): " + totalNos);
                             System.out.println("Filhos diretos da raiz: " + arvore.getRaiz().getChildren().size());
                             System.out.println("Tempo de construção: " + (fim - inicio) + " ms");
-                            
+
                             Node melhorNo = null;
                             for (Node filho : arvore.getRaiz().getChildren()) {
                                 if (filho.getMiniMax() == arvore.getRaiz().getMiniMax()) {
@@ -247,18 +249,19 @@ public final class MainInterfaceGrafica extends JFrame {
                             }
 
                             if (melhorNo != null) {
-                                java.util.ArrayList<Jogada> jogadasRaiz = arvore.retornaJogadasPossiveis(tabuleiroLogico, corIA);
+                                java.util.ArrayList<Jogada> jogadasRaiz = arvore
+                                        .retornaJogadasPossiveis(tabuleiroLogico, corIA);
                                 int indexMelhorNode = arvore.getRaiz().getChildren().indexOf(melhorNo);
-                                
+
                                 if (indexMelhorNode != -1) {
                                     Jogada escolhida = jogadasRaiz.get(indexMelhorNode);
                                     System.out.println("IA Jogando: " + escolhida.toString());
-                                    
+
                                     // Voltando para a Thread Principal da Interface (EDT) para atualizar os botões
                                     SwingUtilities.invokeLater(() -> {
                                         Arvore.aplicarJogadaCompleta(tabuleiroLogico, escolhida);
                                         sincronizarInterface();
-                                        
+
                                         // Retorna o turno pro humano (passa pro outro time)
                                         vez = (corIA == 1) ? 2 : 1;
                                         verificarFimDeJogo();
@@ -283,18 +286,32 @@ public final class MainInterfaceGrafica extends JFrame {
     }
 
     private void verificarFimDeJogo() {
+        boolean acabou = false;
         int[] pecas = tabuleiroLogico.getPecas();
+        int[] damas = tabuleiroLogico.getDamas();
+        
         if (pecas[1] == 0) {
             JOptionPane.showMessageDialog(this, "FIM DE JOGO! As Pretas venceram!");
+            acabou = true;
         } else if (pecas[2] == 0) {
             JOptionPane.showMessageDialog(this, "FIM DE JOGO! As Brancas venceram!");
+            acabou = true;
         }
 
         // Se o jogador estiver travado ele perde
-        if (!RegrasDamas.temMovimentoDisponivel(tabuleiroLogico, vez)) {
+        if (!RegrasDamas.temMovimentoDisponivel(tabuleiroLogico, vez) && !acabou) {
             String vencedor = (vez == 1) ? "Pretas" : "Brancas";
             JOptionPane.showMessageDialog(this,
                     "FIM DE JOGO! As " + vencedor + " venceram! (adversário bloqueado)");
+            acabou = true;
+        }
+
+        // SE EXISTIREM SOMENTE DUAS DAMAS E NÃO FOR POSSÍVEL COMER, ENTÃO EMPATE
+        if (!acabou && pecas[1] == 1 && damas[1] == 1 && pecas[2] == 1 && damas[2] == 1) {
+            if (!RegrasDamas.alguemPodeComer(tabuleiroLogico, 1) && !RegrasDamas.alguemPodeComer(tabuleiroLogico, 2)) {
+                JOptionPane.showMessageDialog(this, "FIM DE JOGO! EMPATE! Somente duas damas restantes no tabuleiro.");
+                acabou = true;
+            }
         }
     }
 

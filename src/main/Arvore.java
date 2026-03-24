@@ -115,7 +115,7 @@ public class Arvore {
         } else {
             // Se o nó ainda não tem o minimax calculado das folhas, calculo recursivamente
             boolean isTurnoHumano = ((no.getTurn() ? 1 : 2) == corHumano);
-            
+
             if (isTurnoHumano) { // Turno humano
                 // minimizar o minimax
                 int min = Integer.MAX_VALUE;
@@ -173,17 +173,20 @@ public class Arvore {
         for (int i = 0; i < TAMANHO; i++) {
             for (int j = 0; j < TAMANHO; j++) {
                 char p = m[i][j];
-                if (p == '0' || p == 'b') continue;
-                
+                if (p == '0' || p == 'b')
+                    continue;
+
                 int timeDaPeca = (p == '1' || p == '3') ? 1 : 2;
                 boolean isDama = (p == '3' || p == '4');
 
                 if (timeDaPeca == corIA) {
                     pecasIA++;
-                    if (isDama) damasIA++;
+                    if (isDama)
+                        damasIA++;
                 } else {
                     pecasHumano++;
-                    if (isDama) damasHumano++;
+                    if (isDama)
+                        damasHumano++;
                 }
             }
         }
@@ -203,6 +206,13 @@ public class Arvore {
             return 100; // Humano travado, Vitória IA
         if (!iaPodeMover)
             return -100; // IA travada, Derrota IA
+
+        // Nova Regra de Empate (1 Dama vs 1 Dama sem capturas imediatas)
+        if (pecasHumano == 1 && damasHumano == 1 && pecasIA == 1 && damasIA == 1) {
+            if (!RegrasDamas.alguemPodeComer(t, corHumano) && !RegrasDamas.alguemPodeComer(t, corIA)) {
+                return -1; // Empate declarado (-1)
+            }
+        }
 
         int score = 0;
 
