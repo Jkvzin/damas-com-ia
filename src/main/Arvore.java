@@ -21,45 +21,123 @@ public class Arvore {
     private int corHumano;
 
     public Arvore(Tabuleiro tabuleiro, int corIA) {
-        this(tabuleiro, corIA, 10);
+        this(tabuleiro, corIA, 12);
     }
 
     public Arvore(Tabuleiro tabuleiro, int corIA, int profundidadeMaxima) {
         this.corIA = corIA;
         this.corHumano = (corIA == 1) ? 2 : 1;
         this.profundidadeMaxima = profundidadeMaxima;
+        
+        boolean isRaizBranca = (corIA == 1);
         this.raiz = new Node();
         this.raiz.setMatriz(copiarMatriz(tabuleiro.getMatriz()));
-        this.raiz.setTurn(corIA == 1); // true == turno inicial das brancas
-        construir(raiz, tabuleiro, 0);
+        this.raiz.setTurn(isRaizBranca);
 
-        // Aplica o algoritmo minimax de imediato para a árvore gerada
-        minMaxJogoDama(raiz);
+        // Quem joga na raiz: a cor da IA (pois a árvore é construída no turno dela)
+        int turnoSendoProcessado = corIA;
+        
+        ArrayList<Jogada> jogadasDaRaiz = retornaJogadasPossiveis(tabuleiro, turnoSendoProcessado);
+
+        int bestValue = Integer.MIN_VALUE;
+        int alpha = Integer.MIN_VALUE;
+        int beta = Integer.MAX_VALUE;
+
+        // Instancia apenas os filhos diretos (Nível 1) no objeto 'Node'
+        for (Jogada jogada : jogadasDaRaiz) {
+            Tabuleiro tFilho = tabuleiro.clone();
+            aplicarJogadaCompleta(tFilho, jogada);
+
+            Node filhoNivel1 = new Node();
+            filhoNivel1.setOrigem(jogada.getOrigem());
+            filhoNivel1.setDest(jogada.getDestino());
+            filhoNivel1.setMatriz(copiarMatriz(tFilho.getMatriz()));
+            filhoNivel1.setTurn(!isRaizBranca); // Inverte o turno para o próximo humano
+            
+            // Avalia o galho profundamente na memória usando o Alfa-Beta, sem construir novos 'Nodes'
+            int score = alphaBeta(tFilho, 1, alpha, beta, !isRaizBranca);
+            filhoNivel1.setMiniMax(score);
+            
+            // Pendura o galho principal para a interface conseguir acessá-lo usando indexOf()
+            // ATENÇÃO: corrigido de addChildren para setChildren!
+            this.raiz.setChildren(filhoNivel1);
+
+            // Turno da IA (Raiz) está maximizando: descobre o melhor lance do nível 1
+            bestValue = Math.max(bestValue, score);
+            alpha = Math.max(alpha, bestValue);
+
+            // Omitimos a poda alfa-beta aqui na base intencionalmente
+            // para gerar as pontuações de TODOS os lances e garantir o "hit" 
+            // no índice do array de botões do Swing, que não foi podado pela GUI.
+        }
+        
+        this.raiz.setMiniMax(bestValue);
     }
 
-    private void construir(Node pai, Tabuleiro tabuleiro, int profundidade) {
-        if (profundidade >= profundidadeMaxima)
-            return;
+    /*
+     * private void minMaxJogoDama(Node no){
+     * if(no.getChildren().isEmpty()){
+     * int miniMax = aplicarHeuristicaVitoria
+     * no.setMiniMax(miniMax);
+     * } else if(no.isTurn()){ //turno usuario
+     * 
+     * for(todos os filhos){
+     * if(chid.getMinmax() == Integer.MIN_VALUE){
+     * miniMaxJogoDama(child)
+     * }
+     * }
+     * min = minimo(no.getChildren());
+     * no.setMiniMax(min);
+     * } else {
+     * int max = maximo(no.getChildren());
+     * no.setMiniMax(max);
+     * }
+     */
+    private int alphaBeta(Tabuleiro t, int nivel, int alpha, int beta, boolean isTurnoBrancas) {
+        int turno = isTurnoBrancas ? 1 : 2;
 
-        int vez = pai.getTurn() ? 1 : 2;
-        ArrayList<Jogada> jogadasPossiveis = retornaJogadasPossiveis(tabuleiro, vez);
+        if (nivel >= profundidadeMaxima) {
+            return aplicarHeuristicaVitoria(t, isTurnoBrancas);
+        }
 
-        for (Jogada jogada : jogadasPossiveis) {
-            Tabuleiro clone = tabuleiro.clone();
-            aplicarJogadaCompleta(clone, jogada);
+        ArrayList<Jogada> jogadasPossiveis = retornaJogadasPossiveis(t, turno);
 
-            // Crio o nó filho
-            Node filho = new Node();
-            filho.setOrigem(jogada.getOrigem());
-            filho.setDest(jogada.getDestino());
-            filho.setMatriz(clone.getMatriz());
-            filho.setTurn(!pai.getTurn());
+        if (jogadasPossiveis.isEmpty()) {
+            return aplicarHeuristicaVitoria(t, isTurnoBrancas);
+        }
 
-            // Adiciono na árvore
-            pai.setChildren(filho);
+        boolean isVezDaIA = (turno == corIA);
 
-            // recursividade
-            construir(filho, clone, profundidade + 1);
+        if (isVezDaIA) {
+            int maxEval = Integer.MIN_VALUE;
+            for (int i = 0; i < jogadasPossiveis.size(); i++) {
+                Jogada jogada = jogadasPossiveis.get(i);
+                Tabuleiro clone = t.clone();
+                aplicarJogadaCompleta(clone, jogada);
+
+                int eval = alphaBeta(clone, nivel + 1, alpha, beta, !isTurnoBrancas);
+                maxEval = Math.max(maxEval, eval);
+                alpha = Math.max(alpha, eval);
+
+                if (beta <= alpha)
+                    break;
+            }
+            return maxEval;
+        } else {
+            int minEval = Integer.MAX_VALUE;
+            for (int i = 0; i < jogadasPossiveis.size(); i++) {
+                Jogada jogada = jogadasPossiveis.get(i);
+                Tabuleiro clone = t.clone();
+                aplicarJogadaCompleta(clone, jogada);
+
+                int eval = alphaBeta(clone, nivel + 1, alpha, beta, !isTurnoBrancas);
+                minEval = Math.min(minEval, eval);
+                beta = Math.min(beta, eval);
+
+                if (beta <= alpha)
+                    break;
+            }
+            return minEval;
         }
     }
 
@@ -89,61 +167,6 @@ public class Arvore {
     }
 
     /*
-     * private void minMaxJogoDama(Node no){
-     * if(no.getChildren().isEmpty()){
-     * int miniMax = aplicarHeuristicaVitoria
-     * no.setMiniMax(miniMax);
-     * } else if(no.isTurn()){ //turno usuario
-     * 
-     * for(todos os filhos){
-     * if(chid.getMinmax() == Integer.MIN_VALUE){
-     * miniMaxJogoDama(child)
-     * }
-     * }
-     * min = minimo(no.getChildren());
-     * no.setMiniMax(min);
-     * } else {
-     * int max = maximo(no.getChildren());
-     * no.setMiniMax(max);
-     * }
-     */
-    private void minMaxJogoDama(Node no) {
-        // Se for um nó folha
-        if (no.getChildren().isEmpty()) {
-            int max = aplicarHeuristicaVitoria(no);
-            no.setMiniMax(max);
-        } else {
-            // Se o nó ainda não tem o minimax calculado das folhas, calculo recursivamente
-            boolean isTurnoHumano = ((no.getTurn() ? 1 : 2) == corHumano);
-
-            if (isTurnoHumano) { // Turno humano
-                // minimizar o minimax
-                int min = Integer.MAX_VALUE;
-                for (Node child : no.getChildren()) {
-                    if (child.getMiniMax() == Integer.MIN_VALUE) {
-                        minMaxJogoDama(child);
-                    }
-                    if (child.getMiniMax() < min) {
-                        min = child.getMiniMax();
-                    }
-                }
-                no.setMiniMax(min);
-            } else { // Turno da IA, maximizar
-                int max = Integer.MIN_VALUE;
-                for (Node child : no.getChildren()) {
-                    if (child.getMiniMax() == Integer.MIN_VALUE) {
-                        minMaxJogoDama(child);
-                    }
-                    if (child.getMiniMax() > max) {
-                        max = child.getMiniMax();
-                    }
-                }
-                no.setMiniMax(max);
-            }
-        }
-    }
-
-    /*
      * minimax
      * 0 empate
      * 1 vitória
@@ -160,15 +183,22 @@ public class Arvore {
      * 
      * turn - maximizar ou minimizar o valor do minimax dos filhos
      */
-    private int aplicarHeuristicaVitoria(Node no) {
-        char[][] m = no.getMatriz();
-        Tabuleiro t = new Tabuleiro();
-        t.setMatriz(m); // Permite usar RegrasDamas
+    private int aplicarHeuristicaVitoria(Tabuleiro t, boolean isTurnoBrancas) {
+        char[][] m = t.getMatriz();
+
+        int SCORE_VITORIA = 100000;
+        int SCORE_EMPATE  = 0;
+        int SCORE_PECA    = 100;
+        int SCORE_DAMA    = 300;
+        int SCORE_CENTRO  = 20;
+        int SCORE_BORDA   = 10;
+        int SCORE_AVANCO  = 5;
+
+        int scoreIA = 0;
+        int scoreHumano = 0;
 
         int pecasIA = 0;
-        int damasIA = 0;
         int pecasHumano = 0;
-        int damasHumano = 0;
 
         for (int i = 0; i < TAMANHO; i++) {
             for (int j = 0; j < TAMANHO; j++) {
@@ -179,58 +209,67 @@ public class Arvore {
                 int timeDaPeca = (p == '1' || p == '3') ? 1 : 2;
                 boolean isDama = (p == '3' || p == '4');
 
+                int bonusPosicional = 0;
+
+                // Bônus de Centro e Bordas
+                if ((i == 2 || i == 3) && (j == 2 || j == 3)) {
+                    bonusPosicional += SCORE_CENTRO; // Domínio Central
+                } else if (j == 0 || j == TAMANHO - 1) {
+                    bonusPosicional += SCORE_BORDA; // Casas Incomíveis
+                }
+
+                // Bônus de Avanço (Direcional)
+                if (!isDama) {
+                    if (timeDaPeca == 1) { // Brancas nascem embaixo e miram a linha 0
+                        bonusPosicional += (TAMANHO - 1 - i) * SCORE_AVANCO;
+                    } else { // Pretas nascem na linha 0 e miram a base (linha 5)
+                        bonusPosicional += i * SCORE_AVANCO;
+                    }
+                }
+
+                // Acumula na carteira da Equipe específica
+                int valorDadoAPeca = (isDama ? SCORE_DAMA : SCORE_PECA) + bonusPosicional;
+
                 if (timeDaPeca == corIA) {
+                    scoreIA += valorDadoAPeca;
                     pecasIA++;
-                    if (isDama)
-                        damasIA++;
                 } else {
+                    scoreHumano += valorDadoAPeca;
                     pecasHumano++;
-                    if (isDama)
-                        damasHumano++;
                 }
             }
         }
 
-        // Fim de jogo (Vitória = 100, Derrota = -100)
-        if (pecasHumano == 0)
-            return 100;
-        if (pecasIA == 0)
-            return -100;
+        // Checagem de Eliminações Reais
+        if (pecasHumano == 0) return SCORE_VITORIA;
+        if (pecasIA == 0) return -SCORE_VITORIA;
 
         boolean humanoPodeMover = RegrasDamas.temMovimentoDisponivel(t, corHumano);
         boolean iaPodeMover = RegrasDamas.temMovimentoDisponivel(t, corIA);
 
-        if (!humanoPodeMover && !iaPodeMover)
-            return -1; // Empate
-        if (!humanoPodeMover)
-            return 100; // Humano travado, Vitória IA
-        if (!iaPodeMover)
-            return -100; // IA travada, Derrota IA
+        // Travamentos e Empate Absoluto
+        if (!humanoPodeMover && !iaPodeMover) return SCORE_EMPATE; 
+        if (!humanoPodeMover) return SCORE_VITORIA; // Adversário sufocado
+        if (!iaPodeMover) return -SCORE_VITORIA; // IA sufocada
 
-        // Nova Regra de Empate (1 Dama vs 1 Dama sem capturas imediatas)
-        if (pecasHumano == 1 && damasHumano == 1 && pecasIA == 1 && damasIA == 1) {
+        // Duelo Infinito (1 Dama x 1 Dama sem capturas imediatas)
+        if (pecasHumano == 1 && scoreHumano >= SCORE_DAMA && pecasIA == 1 && scoreIA >= SCORE_DAMA) {
             if (!RegrasDamas.alguemPodeComer(t, corHumano) && !RegrasDamas.alguemPodeComer(t, corIA)) {
-                return -1; // Empate declarado (-1)
+                return SCORE_EMPATE;
             }
         }
 
-        int score = 0;
+        // Subtração de Forças (O grande Minimax)
+        int score = scoreIA - scoreHumano;
 
-        // Bonificações base (Dama = 2, Normal = 1)
-        score += (pecasIA - damasIA) * 1;
-        score += damasIA * 2;
-
-        score -= (pecasHumano - damasHumano) * 1;
-        score -= damasHumano * 2;
-
-        // Se o turno for da IA (turn==false), bonifica possíveis capturas disponíveis
-        int vezVigente = no.getTurn() ? 1 : 2;
+        // Bônus Dinâmico de Ameaças Fatais (Turnos ativos)
+        int vezVigente = isTurnoBrancas ? 1 : 2;
         boolean isVezDaIA = (vezVigente == corIA);
 
         if (isVezDaIA && RegrasDamas.alguemPodeComer(t, corIA)) {
-            score += 1;
+            score += 50; // Instiga ela a querer capturar nessa rodada
         } else if (!isVezDaIA && RegrasDamas.alguemPodeComer(t, corHumano)) {
-            score -= 1;
+            score -= 50; // Temor contra a ameaça do humano
         }
 
         return score;

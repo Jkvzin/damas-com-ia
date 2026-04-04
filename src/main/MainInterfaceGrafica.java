@@ -51,10 +51,34 @@ public final class MainInterfaceGrafica extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
 
+        perguntarCorJogador();
+
         inicializarComponentes();
         sincronizarInterface();
 
         setVisible(true);
+
+        if (vezIA && corIA == 1) {
+            jogarTurnoIA();
+        }
+    }
+
+    private void perguntarCorJogador() {
+        Object[] options = {"Brancas", "Pretas"};
+        int escolha = JOptionPane.showOptionDialog(this,
+                "Com qual cor você deseja jogar?\n(Brancas começam jogando)",
+                "Escolha de Equipe",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                options,
+                options[0]);
+
+        if (escolha == 1) {
+            corIA = 1; // Humano escolheu Pretas, então IA fica com Brancas e começa
+        } else {
+            corIA = 2; // Humano escolheu Brancas, então IA fica com Pretas
+        }
     }
 
     private void inicializarComponentes() {
@@ -124,7 +148,6 @@ public final class MainInterfaceGrafica extends JFrame {
         }
         // Caso 2: Já existe uma peça selecionada, tentando mover
         else {
-
             // Se clicar na mesma peça, cancela a seleção
             if (linhaOrigem == linha && colOrigem == col) {
                 if (!sequenciaCaptura) {
@@ -224,55 +247,7 @@ public final class MainInterfaceGrafica extends JFrame {
 
                     // Se for a vez da IA, constrói a árvore e calcula possibilidades
                     if (vezIA && vez == corIA) {
-                        System.out.println("\n=== VEZ DA IA ===");
-                        setTitle("DISCIPLINA - IA - MINI JOGO DE DAMA (A IA está pensando...)");
-
-                        // Roda a inteligência numa Thread paralela pra não travar a tela (EDT)
-                        new Thread(() -> {
-                            long inicio = System.currentTimeMillis();
-                            Arvore arvore = new Arvore(tabuleiroLogico.clone(), corIA); // A IA agora funciona pra
-                                                                                        // qualquer lado
-                            long fim = System.currentTimeMillis();
-
-                            int totalNos = contarNos(arvore.getRaiz());
-                            System.out.println("Profundidade máxima: " + arvore.getProfundidadeMaxima());
-                            System.out.println("Total de nós (possibilidades): " + totalNos);
-                            System.out.println("Filhos diretos da raiz: " + arvore.getRaiz().getChildren().size());
-                            System.out.println("Tempo de construção: " + (fim - inicio) + " ms");
-
-                            Node melhorNo = null;
-                            for (Node filho : arvore.getRaiz().getChildren()) {
-                                if (filho.getMiniMax() == arvore.getRaiz().getMiniMax()) {
-                                    melhorNo = filho;
-                                    break;
-                                }
-                            }
-
-                            if (melhorNo != null) {
-                                java.util.ArrayList<Jogada> jogadasRaiz = arvore
-                                        .retornaJogadasPossiveis(tabuleiroLogico, corIA);
-                                int indexMelhorNode = arvore.getRaiz().getChildren().indexOf(melhorNo);
-
-                                if (indexMelhorNode != -1) {
-                                    Jogada escolhida = jogadasRaiz.get(indexMelhorNode);
-                                    System.out.println("IA Jogando: " + escolhida.toString());
-
-                                    // Voltando para a Thread Principal da Interface (EDT) para atualizar os botões
-                                    SwingUtilities.invokeLater(() -> {
-                                        Arvore.aplicarJogadaCompleta(tabuleiroLogico, escolhida);
-                                        sincronizarInterface();
-
-                                        // Retorna o turno pro humano (passa pro outro time)
-                                        vez = (corIA == 1) ? 2 : 1;
-                                        verificarFimDeJogo();
-                                        setTitle("DISCIPLINA - IA - MINI JOGO DE DAMA");
-                                    });
-                                }
-                            } else {
-                                SwingUtilities.invokeLater(() -> setTitle("DISCIPLINA - IA - MINI JOGO DE DAMA"));
-                            }
-                            System.out.println("==================\n");
-                        }).start(); // Inicia a thread separada
+                        jogarTurnoIA();
                     }
                 }
 
@@ -283,6 +258,56 @@ public final class MainInterfaceGrafica extends JFrame {
                 }
             }
         }
+    }
+
+    private void jogarTurnoIA() {
+        System.out.println("\n=== VEZ DA IA ===");
+        setTitle("DISCIPLINA - IA - MINI JOGO DE DAMA (A IA está pensando...)");
+
+        // Roda a inteligência numa Thread paralela pra não travar a tela (EDT)
+        new Thread(() -> {
+            long inicio = System.currentTimeMillis();
+            Arvore arvore = new Arvore(tabuleiroLogico.clone(), corIA);
+            long fim = System.currentTimeMillis();
+
+            int totalNos = contarNos(arvore.getRaiz());
+            System.out.println("Profundidade máxima: " + arvore.getProfundidadeMaxima());
+            System.out.println("Total de nós (possibilidades): " + totalNos);
+            System.out.println("Filhos diretos da raiz: " + arvore.getRaiz().getChildren().size());
+            System.out.println("Tempo de construção: " + (fim - inicio) + " ms");
+
+            Node melhorNo = null;
+            for (Node filho : arvore.getRaiz().getChildren()) {
+                if (filho.getMiniMax() == arvore.getRaiz().getMiniMax()) {
+                    melhorNo = filho;
+                    break;
+                }
+            }
+
+            if (melhorNo != null) {
+                java.util.ArrayList<Jogada> jogadasRaiz = arvore.retornaJogadasPossiveis(tabuleiroLogico, corIA);
+                int indexMelhorNode = arvore.getRaiz().getChildren().indexOf(melhorNo);
+
+                if (indexMelhorNode != -1) {
+                    Jogada escolhida = jogadasRaiz.get(indexMelhorNode);
+                    System.out.println("IA Jogando: " + escolhida.toString());
+
+                    // Voltando para a Thread Principal da Interface para atualizar o Java Swing
+                    SwingUtilities.invokeLater(() -> {
+                        Arvore.aplicarJogadaCompleta(tabuleiroLogico, escolhida);
+                        sincronizarInterface();
+
+                        // Retorna o turno pro humano (passa pro outro time)
+                        vez = (corIA == 1) ? 2 : 1;
+                        verificarFimDeJogo();
+                        setTitle("DISCIPLINA - IA - MINI JOGO DE DAMA");
+                    });
+                }
+            } else {
+                SwingUtilities.invokeLater(() -> setTitle("DISCIPLINA - IA - MINI JOGO DE DAMA"));
+            }
+            System.out.println("==================\n");
+        }).start(); // Inicia a thread separada
     }
 
     private void verificarFimDeJogo() {
@@ -311,6 +336,20 @@ public final class MainInterfaceGrafica extends JFrame {
             if (!RegrasDamas.alguemPodeComer(tabuleiroLogico, 1) && !RegrasDamas.alguemPodeComer(tabuleiroLogico, 2)) {
                 JOptionPane.showMessageDialog(this, "FIM DE JOGO! EMPATE! Somente duas damas restantes no tabuleiro.");
                 acabou = true;
+            }
+        }
+
+        if (acabou) {
+            int resposta = JOptionPane.showConfirmDialog(this, 
+                    "Fim de Partida! Deseja recomeçar o jogo?", 
+                    "Jogar Novamente", 
+                    JOptionPane.YES_NO_OPTION);
+                    
+            if (resposta == JOptionPane.YES_OPTION) {
+                this.dispose(); // Destroi a janela e memória atuais
+                new MainInterfaceGrafica(); // Gera janela zero e invoca a pergunta de cores novamente
+            } else {
+                System.exit(0);
             }
         }
     }
