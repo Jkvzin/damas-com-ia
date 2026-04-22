@@ -6,9 +6,10 @@ public class Arvore {
 
     private static final int TAMANHO = 6;
     private Node raiz;
-    private int profundidadeMaxima;
+    private int dificuldadeEscolhida;
+    private int profundidadeCalculada;
 
-    private static final char[][] MAPA_LETRAS = {
+    public static final char[][] MAPA_LETRAS = {
             { 0, 'A', 0, 'B', 0, 'C' },
             { 'D', 0, 'E', 0, 'F', 0 },
             { 0, 'G', 0, 'H', 0, 'I' },
@@ -24,20 +25,48 @@ public class Arvore {
         this(tabuleiro, corIA, 12);
     }
 
-    public Arvore(Tabuleiro tabuleiro, int corIA, int profundidadeMaxima) {
+    public Arvore(Tabuleiro tabuleiro, int corIA, int dificuldadeEscolhida) {
         this.corIA = corIA;
         this.corHumano = (corIA == 1) ? 2 : 1;
-        this.profundidadeMaxima = profundidadeMaxima;
+        this.dificuldadeEscolhida = dificuldadeEscolhida;
         
+        // Mapeamento de dificuldade para nós
+        if (dificuldadeEscolhida <= 1) this.profundidadeCalculada = 0;
+        else if (dificuldadeEscolhida == 2) this.profundidadeCalculada = 1;
+        else if (dificuldadeEscolhida == 3) this.profundidadeCalculada = 2;
+        else if (dificuldadeEscolhida == 4) this.profundidadeCalculada = 4;
+        else if (dificuldadeEscolhida == 9) this.profundidadeCalculada = 12; // Desempenho Original Máximo (12 níveis sem alocação)
+        else this.profundidadeCalculada = dificuldadeEscolhida; // 5 ao 8
+
         boolean isRaizBranca = (corIA == 1);
         this.raiz = new Node();
         this.raiz.setMatriz(copiarMatriz(tabuleiro.getMatriz()));
         this.raiz.setTurn(isRaizBranca);
 
-        // Quem joga na raiz: a cor da IA (pois a árvore é construída no turno dela)
         int turnoSendoProcessado = corIA;
-        
         ArrayList<Jogada> jogadasDaRaiz = retornaJogadasPossiveis(tabuleiro, turnoSendoProcessado);
+
+        // -- DIFICULDADE 1: JOGADA 100% ALEATÓRIA --
+        if (dificuldadeEscolhida == 1) {
+            if (!jogadasDaRaiz.isEmpty()) {
+                int rnd = (int)(Math.random() * jogadasDaRaiz.size());
+                Jogada escolhida = jogadasDaRaiz.get(rnd);
+                
+                Tabuleiro tFilho = tabuleiro.clone();
+                aplicarJogadaCompleta(tFilho, escolhida);
+                
+                Node filhoUnico = new Node();
+                filhoUnico.setOrigem(escolhida.getOrigem());
+                filhoUnico.setDest(escolhida.getDestino());
+                filhoUnico.setMatriz(copiarMatriz(tFilho.getMatriz()));
+                filhoUnico.setTurn(!isRaizBranca);
+                filhoUnico.setMiniMax(100);
+                
+                this.raiz.setChildren(filhoUnico);
+                this.raiz.setMiniMax(100);
+            }
+            return; // Encerra, a IA fica totalmente burra no Nível 1
+        }
 
         int bestValue = Integer.MIN_VALUE;
         int alpha = Integer.MIN_VALUE;
@@ -54,21 +83,14 @@ public class Arvore {
             filhoNivel1.setMatriz(copiarMatriz(tFilho.getMatriz()));
             filhoNivel1.setTurn(!isRaizBranca); // Inverte o turno para o próximo humano
             
-            // Avalia o galho profundamente na memória usando o Alfa-Beta, sem construir novos 'Nodes'
-            int score = alphaBeta(tFilho, 1, alpha, beta, !isRaizBranca);
+            // Avalia o galho profundamente repassando o Node atual
+            int score = alphaBeta(tFilho, 1, alpha, beta, !isRaizBranca, filhoNivel1);
             filhoNivel1.setMiniMax(score);
             
-            // Pendura o galho principal para a interface conseguir acessá-lo usando indexOf()
-            // ATENÇÃO: corrigido de addChildren para setChildren!
             this.raiz.setChildren(filhoNivel1);
 
-            // Turno da IA (Raiz) está maximizando: descobre o melhor lance do nível 1
             bestValue = Math.max(bestValue, score);
             alpha = Math.max(alpha, bestValue);
-
-            // Omitimos a poda alfa-beta aqui na base intencionalmente
-            // para gerar as pontuações de TODOS os lances e garantir o "hit" 
-            // no índice do array de botões do Swing, que não foi podado pela GUI.
         }
         
         this.raiz.setMiniMax(bestValue);
@@ -93,11 +115,16 @@ public class Arvore {
      * no.setMiniMax(max);
      * }
      */
-    private int alphaBeta(Tabuleiro t, int nivel, int alpha, int beta, boolean isTurnoBrancas) {
+    private int alphaBeta(Tabuleiro t, int nivel, int alpha, int beta, boolean isTurnoBrancas, Node noOrigem) {
         int turno = isTurnoBrancas ? 1 : 2;
 
-        if (nivel >= profundidadeMaxima) {
-            return aplicarHeuristicaVitoria(t, isTurnoBrancas);
+        // Limite Absoluto
+        if (nivel >= profundidadeCalculada) {
+            if (dificuldadeEscolhida == 10) {
+                return aplicarHeuristicaVitoria(t, isTurnoBrancas);
+            } else {
+                return simulacaoAleatoria(t, nivel, isTurnoBrancas);
+            }
         }
 
         ArrayList<Jogada> jogadasPossiveis = retornaJogadasPossiveis(t, turno);
@@ -115,7 +142,16 @@ public class Arvore {
                 Tabuleiro clone = t.clone();
                 aplicarJogadaCompleta(clone, jogada);
 
-                int eval = alphaBeta(clone, nivel + 1, alpha, beta, !isTurnoBrancas);
+                Node filho = new Node();
+                filho.setOrigem(jogada.getOrigem());
+                filho.setDest(jogada.getDestino());
+                filho.setMatriz(copiarMatriz(clone.getMatriz()));
+                filho.setTurn(!isTurnoBrancas);
+                if (noOrigem != null) noOrigem.setChildren(filho);
+
+                int eval = alphaBeta(clone, nivel + 1, alpha, beta, !isTurnoBrancas, filho);
+                filho.setMiniMax(eval);
+                
                 maxEval = Math.max(maxEval, eval);
                 alpha = Math.max(alpha, eval);
 
@@ -130,7 +166,16 @@ public class Arvore {
                 Tabuleiro clone = t.clone();
                 aplicarJogadaCompleta(clone, jogada);
 
-                int eval = alphaBeta(clone, nivel + 1, alpha, beta, !isTurnoBrancas);
+                Node filho = new Node();
+                filho.setOrigem(jogada.getOrigem());
+                filho.setDest(jogada.getDestino());
+                filho.setMatriz(copiarMatriz(clone.getMatriz()));
+                filho.setTurn(!isTurnoBrancas);
+                if (noOrigem != null) noOrigem.setChildren(filho);
+
+                int eval = alphaBeta(clone, nivel + 1, alpha, beta, !isTurnoBrancas, filho);
+                filho.setMiniMax(eval);
+
                 minEval = Math.min(minEval, eval);
                 beta = Math.min(beta, eval);
 
@@ -141,7 +186,7 @@ public class Arvore {
         }
     }
 
-    public ArrayList<Jogada> retornaJogadasPossiveis(Tabuleiro tabuleiro, int vez) {
+    public static ArrayList<Jogada> retornaJogadasPossiveis(Tabuleiro tabuleiro, int vez) {
         ArrayList<Jogada> jogadas = new ArrayList<>();
         char[][] m = tabuleiro.getMatriz();
         boolean deveComer = RegrasDamas.alguemPodeComer(tabuleiro, vez);
@@ -163,7 +208,37 @@ public class Arvore {
                 }
             }
         }
+        
+        if (deveComer) {
+            return filtrarMaioria(jogadas);
+        }
         return jogadas;
+    }
+
+    public static int contarCapturas(Jogada j) {
+        int count = 0;
+        Jogada atual = j;
+        while (atual != null) {
+            if (atual.isCaptura()) count++;
+            atual = atual.getProximaCaptura();
+        }
+        return count;
+    }
+
+    public static ArrayList<Jogada> filtrarMaioria(ArrayList<Jogada> jogadas) {
+        if (jogadas.isEmpty()) return jogadas;
+        int max = 0;
+        for (Jogada j : jogadas) {
+            int c = contarCapturas(j);
+            if (c > max) max = c;
+        }
+        if (max == 0) return jogadas;
+
+        ArrayList<Jogada> filtradas = new ArrayList<>();
+        for (Jogada j : jogadas) {
+            if (contarCapturas(j) == max) filtradas.add(j);
+        }
+        return filtradas;
     }
 
     /*
@@ -190,9 +265,13 @@ public class Arvore {
         int SCORE_EMPATE  = 0;
         int SCORE_PECA    = 100;
         int SCORE_DAMA    = 300;
-        int SCORE_CENTRO  = 20;
-        int SCORE_BORDA   = 10;
-        int SCORE_AVANCO  = 5;
+        
+        // Tier 1 (Fácil): Sem bônus geográfico.
+        // Tier 2 e 3 (Médio/Difícil): Bônus geográfico ativado.
+        boolean inteligenciaPosicional = dificuldadeEscolhida >= 4;
+        int SCORE_CENTRO  = inteligenciaPosicional ? 20 : 0;
+        int SCORE_BORDA   = inteligenciaPosicional ? 10 : 0;
+        int SCORE_AVANCO  = inteligenciaPosicional ? 5 : 0;
 
         int scoreIA = 0;
         int scoreHumano = 0;
@@ -251,6 +330,11 @@ public class Arvore {
         if (!humanoPodeMover && !iaPodeMover) return SCORE_EMPATE; 
         if (!humanoPodeMover) return SCORE_VITORIA; // Adversário sufocado
         if (!iaPodeMover) return -SCORE_VITORIA; // IA sufocada
+        
+        // Empate por falta de capturas (20 lances = 10 rodadas completas)
+        if (t.getJogadasSemCaptura() >= 20) {
+            return SCORE_EMPATE;
+        }
 
         // Duelo Infinito (1 Dama x 1 Dama sem capturas imediatas)
         if (pecasHumano == 1 && scoreHumano >= SCORE_DAMA && pecasIA == 1 && scoreIA >= SCORE_DAMA) {
@@ -262,20 +346,50 @@ public class Arvore {
         // Subtração de Forças (O grande Minimax)
         int score = scoreIA - scoreHumano;
 
-        // Bônus Dinâmico de Ameaças Fatais (Turnos ativos)
-        int vezVigente = isTurnoBrancas ? 1 : 2;
-        boolean isVezDaIA = (vezVigente == corIA);
+        // Tier 3 (Impossível): Bônus Dinâmico de Ameaças Fatais (Turnos ativos)
+        if (dificuldadeEscolhida >= 7) {
+            int vezVigente = isTurnoBrancas ? 1 : 2;
+            boolean isVezDaIA = (vezVigente == corIA);
 
-        if (isVezDaIA && RegrasDamas.alguemPodeComer(t, corIA)) {
-            score += 50; // Instiga ela a querer capturar nessa rodada
-        } else if (!isVezDaIA && RegrasDamas.alguemPodeComer(t, corHumano)) {
-            score -= 50; // Temor contra a ameaça do humano
+            if (isVezDaIA && RegrasDamas.alguemPodeComer(t, corIA)) {
+                score += 50; // Instiga ela a querer capturar nessa rodada
+            } else if (!isVezDaIA && RegrasDamas.alguemPodeComer(t, corHumano)) {
+                score -= 50; // Temor contra a ameaça do humano
+            }
         }
 
         return score;
     }
 
-    private void buscarMovimentos(char[][] m, int linha, int col, ArrayList<Jogada> jogadas) {
+    private int simulacaoAleatoria(Tabuleiro t, int nivelAtual, boolean isTurnoBrancas) {
+        Tabuleiro clone = t.clone();
+        int iteracoesAleatorias = 0;
+        boolean turnoAtualBrancas = isTurnoBrancas;
+
+        java.util.Random rand = new java.util.Random();
+
+        while (nivelAtual + iteracoesAleatorias < 10) {
+            int vezAtual = turnoAtualBrancas ? 1 : 2;
+            ArrayList<Jogada> jogadasPossiveis = retornaJogadasPossiveis(clone, vezAtual);
+
+            if (jogadasPossiveis.isEmpty()) {
+                break; // Fim de jogo na simulação
+            }
+
+            int randomIndex = rand.nextInt(jogadasPossiveis.size());
+            Jogada escolhida = jogadasPossiveis.get(randomIndex);
+
+            aplicarJogadaCompleta(clone, escolhida);
+
+            turnoAtualBrancas = !turnoAtualBrancas;
+            iteracoesAleatorias++;
+        }
+
+        // Ao final das jogadas aleatórias, usa a heurística no tabuleiro simulado
+        return aplicarHeuristicaVitoria(clone, turnoAtualBrancas);
+    }
+
+    public static void buscarMovimentos(char[][] m, int linha, int col, ArrayList<Jogada> jogadas) {
         int peca = m[linha][col];
         char origem = MAPA_LETRAS[linha][col];
 
@@ -301,7 +415,7 @@ public class Arvore {
         }
     }
 
-    private void buscarCapturas(char[][] m, int linha, int col, boolean emSequencia,
+    public static void buscarCapturas(char[][] m, int linha, int col, boolean emSequencia,
             ArrayList<Jogada> resultado) {
         int peca = m[linha][col];
         char origem = MAPA_LETRAS[linha][col];
@@ -337,7 +451,7 @@ public class Arvore {
         }
     }
 
-    private ArrayList<int[]> encontrarCapturas(char[][] m, int linha, int col, int peca, boolean emSequencia) {
+    public static ArrayList<int[]> encontrarCapturas(char[][] m, int linha, int col, int peca, boolean emSequencia) {
         ArrayList<int[]> capturas = new ArrayList<>();
 
         if (peca > '2') {
@@ -389,6 +503,8 @@ public class Arvore {
 
     public static void aplicarJogadaCompleta(Tabuleiro tabuleiro, Jogada jogada) {
         Jogada atual = jogada;
+        boolean houveCaptura = false;
+        
         while (atual != null) {
             Posicao orig = Jogada.getPosicaoDaLetra(atual.getOrigem());
             Posicao dest = Jogada.getPosicaoDaLetra(atual.getDestino());
@@ -401,6 +517,7 @@ public class Arvore {
             m[r1][c1] = '0';
 
             if (atual.isCaptura()) {
+                houveCaptura = true;
                 int dirL = Integer.signum(r2 - r1);
                 int dirC = Integer.signum(c2 - c1);
                 tabuleiro.removerPeca(r2 - dirL, c2 - dirC);
@@ -417,18 +534,24 @@ public class Arvore {
 
             atual = atual.getProximaCaptura();
         }
+        
+        if (houveCaptura) {
+            tabuleiro.setJogadasSemCaptura(0);
+        } else {
+            tabuleiro.setJogadasSemCaptura(tabuleiro.getJogadasSemCaptura() + 1);
+        }
     }
 
-    private boolean dentro(int linha, int col) {
+    public static boolean dentro(int linha, int col) {
         return linha >= 0 && linha < TAMANHO && col >= 0 && col < TAMANHO;
     }
 
-    private boolean ehInimiga(char[][] m, int linha, int col, int peca) {
+    public static boolean ehInimiga(char[][] m, int linha, int col, int peca) {
         int p = m[linha][col];
         return p != '0' && p != 'b' && (p % 2 != peca % 2);
     }
 
-    private char[][] copiarMatriz(char[][] original) {
+    public static char[][] copiarMatriz(char[][] original) {
         char[][] copia = new char[TAMANHO][TAMANHO];
         for (int i = 0; i < TAMANHO; i++) {
             copia[i] = original[i].clone();
@@ -440,7 +563,11 @@ public class Arvore {
         return raiz;
     }
 
-    public int getProfundidadeMaxima() {
-        return profundidadeMaxima;
+    public int getDificuldadeEscolhida() {
+        return dificuldadeEscolhida;
+    }
+
+    public int getProfundidadeCalculada() {
+        return profundidadeCalculada;
     }
 }

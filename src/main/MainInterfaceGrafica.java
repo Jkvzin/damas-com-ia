@@ -37,6 +37,7 @@ public final class MainInterfaceGrafica extends JFrame {
     private boolean sequenciaCaptura = false;
     private boolean vezIA = true; // true = IA está ativada no jogo
     private int corIA = 2; // AI é 1 (Branca) ou 2 (Preta) - configurado para Pretas por padrão
+    private int profundidadeIA = 5; // Grau de inteligência inputado pelo usuário
 
     public MainInterfaceGrafica() {
 
@@ -52,6 +53,7 @@ public final class MainInterfaceGrafica extends JFrame {
         setResizable(false);
 
         perguntarCorJogador();
+        perguntarDificuldade();
 
         inicializarComponentes();
         sincronizarInterface();
@@ -60,6 +62,25 @@ public final class MainInterfaceGrafica extends JFrame {
 
         if (vezIA && corIA == 1) {
             jogarTurnoIA();
+        }
+    }
+
+    private void perguntarDificuldade() {
+        Object[] options = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10 (Máximo)"};
+        
+        int escolha = JOptionPane.showOptionDialog(this,
+                "Escolha a Dificuldade da IA (Nível de 1 a 10):",
+                "Dificuldade",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                options,
+                options[4]); // Padrão nível 5
+
+        if (escolha >= 0) {
+            profundidadeIA = escolha + 1; // Índices vão de 0 a 8, então somamos 1
+        } else {
+            profundidadeIA = 5; // Se o usuário fechar a aba
         }
     }
 
@@ -120,14 +141,16 @@ public final class MainInterfaceGrafica extends JFrame {
 
         boolean sucesso = false;
         boolean realizouCaptura = false;
+        
+        java.util.ArrayList<Jogada> jogadasPermitidas = obterJogadasPermitidas();
 
-        // Verifico se tem alguma captura obrigatória
-        boolean alguemPodeComer;
-        if (sequenciaCaptura) {
-            // Durante combo, verifico se a peça do combo pode capturar
-            alguemPodeComer = RegrasDamas.temCapturaDisponivel(tabuleiroLogico, linhaOrigem, colOrigem, true);
-        } else {
-            alguemPodeComer = RegrasDamas.alguemPodeComer(tabuleiroLogico, vez);
+        // Verifico se tem alguma captura obrigatória de forma nativa (já validada pela Maioria)
+        boolean alguemPodeComer = false;
+        for (Jogada j : jogadasPermitidas) {
+            if (j.isCaptura()) {
+                alguemPodeComer = true;
+                break;
+            }
         }
 
         // Caso 1: Nenhuma peça selecionada ainda
@@ -136,14 +159,25 @@ public final class MainInterfaceGrafica extends JFrame {
             // Verifica se a casa clicada contém peça do jogador da vez
             if ((tabuleiroLogico.getMatriz()[linha][col] != '0') && (tabuleiroLogico.getMatriz()[linha][col] != 'b')
                     && ((vez % 2) == (tabuleiroLogico.getMatriz()[linha][col] % 2))) {
-                if (alguemPodeComer
-                        && !RegrasDamas.temCapturaDisponivel(tabuleiroLogico, linha, col, sequenciaCaptura)) {
-                    return; // Sai se for obrigado a comer mas clicou na peça errada
+                
+                // Valida se a peça clicada faz parte da lista de peças que têm permissão de jogar
+                boolean pecaPodeJogar = false;
+                char origemClicada = Arvore.MAPA_LETRAS[linha][col];
+                for (Jogada j : jogadasPermitidas) {
+                    if (j.getOrigem() == origemClicada) {
+                        pecaPodeJogar = true;
+                        break;
+                    }
+                }
+                
+                if (!pecaPodeJogar) {
+                    return; // Sai se a peça não tiver jogadas válidas (ou se não for a que mais captura)
                 }
 
                 linhaOrigem = linha;
                 colOrigem = col;
                 tabuleiroInterface[linha][col].setBackground(Color.YELLOW); // Destaque do clique
+                destacarJogadasPossiveis(jogadasPermitidas); // Pinta de roxo os destinos
             }
         }
         // Caso 2: Já existe uma peça selecionada, tentando mover
@@ -156,76 +190,40 @@ public final class MainInterfaceGrafica extends JFrame {
                 return;
             }
 
-            int distLinha = Math.abs(linha - linhaOrigem);
-            int distCol = Math.abs(col - colOrigem);
-            int peca = tabuleiroLogico.getMatriz()[linhaOrigem][colOrigem];
+            char origemSelecionada = Arvore.MAPA_LETRAS[linhaOrigem][colOrigem];
+            char destinoClicado = Arvore.MAPA_LETRAS[linha][col];
 
-            if (distLinha == distCol && distLinha > 0) {
+            // Verifica se o destino clicado bate exatamente com o primeiro salto permitido na Lei da Maioria
+            boolean jogadaPermitida = false;
+            for (Jogada j : jogadasPermitidas) {
+                if (j.getOrigem() == origemSelecionada && j.getDestino() == destinoClicado) {
+                    jogadaPermitida = true;
+                    break;
+                }
+            }
 
-                if (!alguemPodeComer) {
-                    // Movimento simples
-                    if (peca <= '2' && distLinha == 1) {
-                        if ((peca == '1' && linha < linhaOrigem) || (peca == '2' && linha > linhaOrigem)) {
-                            sucesso = moverPecaLogica(linhaOrigem, colOrigem, linha, col);
-                        }
-                    } else if (peca > '2') {
-                        if (RegrasDamas.caminhoVazio(tabuleiroLogico, linhaOrigem, colOrigem, linha, col)) {
-                            sucesso = moverPecaLogica(linhaOrigem, colOrigem, linha, col);
-                        }
-                    }
-                } else {
-                    if (peca <= '2' && distLinha == 2) {
-                        // Peça comum comendo
-                        int linhaMeio = (linha + linhaOrigem) / 2;
-                        int colMeio = (col + colOrigem) / 2;
-                        int pecaMeio = tabuleiroLogico.getMatriz()[linhaMeio][colMeio];
+            if (jogadaPermitida) {
+                int[] pecaARemover = null;
 
-                        boolean sentidoValido = true;
-                        if (!sequenciaCaptura) {
-                            if (peca == '1' && linha > linhaOrigem)
-                                sentidoValido = false;
-                            if (peca == '2' && linha < linhaOrigem)
-                                sentidoValido = false;
-                        }
-                        if (sentidoValido && pecaMeio != '0' && pecaMeio != 'b' && (pecaMeio % 2 != peca % 2)) {
-                            sucesso = moverPecaLogica(linhaOrigem, colOrigem, linha, col);
-                            if (sucesso) {
-                                tabuleiroLogico.removerPeca(linhaMeio, colMeio);
-                                realizouCaptura = true;
-                            }
-                        }
-                    } else if (peca > '2') {
-                        // Tratamento diferenciado da Dama
-                        if (sequenciaCaptura) {
-                            // Em combo só pode comer peça adjacente
-                            if (distLinha == 2) {
-                                int linhaMeio = (linha + linhaOrigem) / 2;
-                                int colMeio = (col + colOrigem) / 2;
-                                int pecaMeio = tabuleiroLogico.getMatriz()[linhaMeio][colMeio];
-
-                                if (pecaMeio != '0' && pecaMeio != 'b' && (pecaMeio % 2 != peca % 2)) {
-                                    sucesso = moverPecaLogica(linhaOrigem, colOrigem, linha, col);
-                                    if (sucesso) {
-                                        tabuleiroLogico.removerPeca(linhaMeio, colMeio);
-                                        realizouCaptura = true;
-                                    }
-                                }
-                            }
+                if (alguemPodeComer) {
+                    int distLinha = Math.abs(linha - linhaOrigem);
+                    if (distLinha >= 2) { // Capturas sempre saltam
+                        int peca = tabuleiroLogico.getMatriz()[linhaOrigem][colOrigem];
+                        if (peca > '2') {
+                            pecaARemover = RegrasDamas.tentarCapturaDama(tabuleiroLogico, linhaOrigem, colOrigem, linha, col);
                         } else {
-                            // Primeira captura é distância livre pra dama
-                            if (distLinha > 1) {
-                                int[] posInimiga = RegrasDamas.tentarCapturaDama(tabuleiroLogico, linhaOrigem,
-                                        colOrigem, linha, col);
-                                if (posInimiga != null) {
-                                    sucesso = moverPecaLogica(linhaOrigem, colOrigem, linha, col);
-                                    if (sucesso) {
-                                        tabuleiroLogico.removerPeca(posInimiga[0], posInimiga[1]);
-                                        realizouCaptura = true;
-                                    }
-                                }
-                            }
+                            int dirLinha = Integer.signum(linha - linhaOrigem);
+                            int dirCol = Integer.signum(col - colOrigem);
+                            pecaARemover = new int[] { linha - dirLinha, col - dirCol };
                         }
                     }
+                }
+
+                sucesso = moverPecaLogica(linhaOrigem, colOrigem, linha, col);
+
+                if (sucesso && pecaARemover != null) {
+                    tabuleiroLogico.removerPeca(pecaARemover[0], pecaARemover[1]);
+                    realizouCaptura = true;
                 }
             }
 
@@ -236,14 +234,32 @@ public final class MainInterfaceGrafica extends JFrame {
                 verificarFimDeJogo();
 
                 // Verifica se pode continuar comendo
-                if (realizouCaptura && RegrasDamas.temCapturaDisponivel(tabuleiroLogico, linha, col, true)) {
+                if (realizouCaptura) {
+                    // Temporariamente marca como sequenciaCaptura e checa as permissões para ver se ainda tem combos pendentes
                     sequenciaCaptura = true;
                     linhaOrigem = linha;
                     colOrigem = col;
-                    tabuleiroInterface[linhaOrigem][colOrigem].setBackground(Color.YELLOW);
-                } else {
+                    java.util.ArrayList<Jogada> proximosCombos = obterJogadasPermitidas();
+                    
+                    if (!proximosCombos.isEmpty()) {
+                        tabuleiroInterface[linhaOrigem][colOrigem].setBackground(Color.YELLOW);
+                        destacarJogadasPossiveis(proximosCombos); // Pinta de roxo os próximos combos
+                    } else {
+                        // Combo acabou ou não tem mais nada
+                        sequenciaCaptura = false;
+                        cancelarSelecao();
+                    }
+                } 
+                
+                if (!sequenciaCaptura) {
                     vez = (vez == 1) ? 2 : 1;
                     sequenciaCaptura = false;
+                    
+                    if (realizouCaptura) {
+                        tabuleiroLogico.setJogadasSemCaptura(0);
+                    } else {
+                        tabuleiroLogico.setJogadasSemCaptura(tabuleiroLogico.getJogadasSemCaptura() + 1);
+                    }
 
                     // Se for a vez da IA, constrói a árvore e calcula possibilidades
                     if (vezIA && vez == corIA) {
@@ -267,11 +283,12 @@ public final class MainInterfaceGrafica extends JFrame {
         // Roda a inteligência numa Thread paralela pra não travar a tela (EDT)
         new Thread(() -> {
             long inicio = System.currentTimeMillis();
-            Arvore arvore = new Arvore(tabuleiroLogico.clone(), corIA);
+            Arvore arvore = new Arvore(tabuleiroLogico.clone(), corIA, profundidadeIA);
             long fim = System.currentTimeMillis();
 
             int totalNos = contarNos(arvore.getRaiz());
-            System.out.println("Profundidade máxima: " + arvore.getProfundidadeMaxima());
+            System.out.println("Dificuldade escolhida: " + arvore.getDificuldadeEscolhida());
+            System.out.println("Profundidade calculada: " + arvore.getProfundidadeCalculada());
             System.out.println("Total de nós (possibilidades): " + totalNos);
             System.out.println("Filhos diretos da raiz: " + arvore.getRaiz().getChildren().size());
             System.out.println("Tempo de construção: " + (fim - inicio) + " ms");
@@ -285,7 +302,7 @@ public final class MainInterfaceGrafica extends JFrame {
             }
 
             if (melhorNo != null) {
-                java.util.ArrayList<Jogada> jogadasRaiz = arvore.retornaJogadasPossiveis(tabuleiroLogico, corIA);
+                java.util.ArrayList<Jogada> jogadasRaiz = Arvore.retornaJogadasPossiveis(tabuleiroLogico, corIA);
                 int indexMelhorNode = arvore.getRaiz().getChildren().indexOf(melhorNo);
 
                 if (indexMelhorNode != -1) {
@@ -337,6 +354,12 @@ public final class MainInterfaceGrafica extends JFrame {
                 JOptionPane.showMessageDialog(this, "FIM DE JOGO! EMPATE! Somente duas damas restantes no tabuleiro.");
                 acabou = true;
             }
+        }
+        
+        // EMPATE POR FAIXA DE LANCES SEM CAPTURA
+        if (!acabou && tabuleiroLogico.getJogadasSemCaptura() >= 20) { // 20 lances (10 pra cada jogador)
+            JOptionPane.showMessageDialog(this, "FIM DE JOGO! EMPATE! 10 rodadas completas sem nenhuma captura.");
+            acabou = true;
         }
 
         if (acabou) {
@@ -397,12 +420,44 @@ public final class MainInterfaceGrafica extends JFrame {
     }
 
     private void cancelarSelecao() {
-        if (linhaOrigem != -1) {
-            // Restaura a cor original
-            tabuleiroInterface[linhaOrigem][colOrigem].setBackground(new Color(119, 149, 86));
-        }
         linhaOrigem = -1;
         colOrigem = -1;
+        
+        // Restaura a cor de TODO o tabuleiro para limpar a seleção amarela e os destinos roxos
+        for (int i = 0; i < TAMANHO; i++) {
+            for (int j = 0; j < TAMANHO; j++) {
+                if ((i + j) % 2 == 0) {
+                    tabuleiroInterface[i][j].setBackground(new Color(235, 235, 208)); // Bege
+                } else {
+                    tabuleiroInterface[i][j].setBackground(new Color(119, 149, 86)); // Verde
+                }
+            }
+        }
+    }
+
+    private java.util.ArrayList<Jogada> obterJogadasPermitidas() {
+        if (!sequenciaCaptura) {
+            return Arvore.retornaJogadasPossiveis(tabuleiroLogico, vez);
+        } else {
+            java.util.ArrayList<Jogada> jogadas = new java.util.ArrayList<>();
+            char[][] matriz = tabuleiroLogico.getMatriz();
+            // Em combo, restringe a busca APENAS a partir da peça que está comendo
+            if (matriz[linhaOrigem][colOrigem] != '0' && matriz[linhaOrigem][colOrigem] != 'b') {
+                Arvore.buscarCapturas(matriz, linhaOrigem, colOrigem, true, jogadas);
+            }
+            return Arvore.filtrarMaioria(jogadas);
+        }
+    }
+
+    private void destacarJogadasPossiveis(java.util.ArrayList<Jogada> jogadasPermitidas) {
+        char origemSelecionada = Arvore.MAPA_LETRAS[linhaOrigem][colOrigem];
+
+        for (Jogada j : jogadasPermitidas) {
+            if (j.getOrigem() == origemSelecionada) {
+                Posicao dest = Jogada.getPosicaoDaLetra(j.getDestino());
+                tabuleiroInterface[dest.getLinha()][dest.getColuna()].setBackground(new Color(147, 112, 219)); 
+            }
+        }
     }
 
     public static void main(String[] args) {

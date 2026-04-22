@@ -6,11 +6,13 @@ public class Tabuleiro implements Cloneable {
     private final int TAMANHO = 6;
     private int[] pecas; // pecas[1] = brancas, pecas[2] = pretas
     private int[] damas; // damas[1] = damas brancas, damas[2] = damas pretas (3 e 4)
+    private int jogadasSemCaptura;
 
     public Tabuleiro() {
         this.matriz = new char[TAMANHO][TAMANHO];
         this.pecas = new int[] { 0, TAMANHO, TAMANHO }; // a primeira posicao é ignoravel pra facilitar depois
         this.damas = new int[] { 0, 0, 0 };
+        this.jogadasSemCaptura = 0;
         inicializar();
     }
 
@@ -62,10 +64,19 @@ public class Tabuleiro implements Cloneable {
             }
             clone.pecas = this.pecas.clone();
             clone.damas = this.damas.clone();
+            clone.jogadasSemCaptura = this.jogadasSemCaptura;
             return clone;
         } catch (CloneNotSupportedException e) {
             return null;
         }
+    }
+
+    public int getJogadasSemCaptura() {
+        return jogadasSemCaptura;
+    }
+
+    public void setJogadasSemCaptura(int jogadasSemCaptura) {
+        this.jogadasSemCaptura = jogadasSemCaptura;
     }
 
     public char[][] getMatriz() {
