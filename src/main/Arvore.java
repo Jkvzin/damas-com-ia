@@ -32,7 +32,7 @@ public class Arvore {
         
         // Mapeamento linear exato: Dificuldade 1 = Profundidade 1, etc
         if (dificuldadeEscolhida == 10) {
-            this.profundidadeCalculada = 13; // Modo Máximo (Minimax Puro)
+            this.profundidadeCalculada = 12; // Modo Máximo (Minimax Puro)
         } else {
             this.profundidadeCalculada = dificuldadeEscolhida; // 1 ao 9
         }
@@ -75,7 +75,7 @@ public class Arvore {
     }
 
 
-    //func principal que constroi a arvore de possibilidades
+    //metodo principal que constroi a arvore de possibilidades
     //usa a poda alfa-beta pra não gastar memoria calculando jogada que ja sabe que é ruim
     private int alphaBeta(Tabuleiro t, int nivel, int alpha, int beta, boolean isTurnoBrancas, Node noOrigem) {
         int turno = isTurnoBrancas ? 1 : 2;
@@ -203,23 +203,6 @@ public class Arvore {
         return filtradas;
     }
 
-    /*
-     * minimax
-     * 0 empate
-     * 1 vitória
-     * -1 derrota
-     * 
-     * vitória + 100
-     * derrota - 100
-     * empate -1
-     * dama + 2
-     * normal + 1
-     * se é vezIA e temCapturaDisponivel + 1
-     * // // // // e combo possivel + (tamanho do combo)
-     * //
-     * 
-     * turn - maximizar ou minimizar o valor do minimax dos filhos
-     */
     private int aplicarHeuristicaVitoria(Tabuleiro t, boolean isTurnoBrancas) {
         char[][] m = t.getMatriz();
 
@@ -227,7 +210,7 @@ public class Arvore {
         int SCORE_EMPATE  = 0;
         int SCORE_PECA    = 100;
         int SCORE_DAMA    = 300;
-        
+
         //pontos pra quem chega perto do meio, fica na borda e avança
         int SCORE_CENTRO  = 20;
         int SCORE_BORDA   = 10;

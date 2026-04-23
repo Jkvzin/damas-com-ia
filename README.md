@@ -1,5 +1,9 @@
 # Mini Jogo de Damas com Inteligência Artificial
 
+Aluno: João Victor Borges Carvalho
+Repositório no github: https://github.com/Jkvzin/damas-com-ia.git
+
+
 Este projeto é uma implementação em Java de um jogo de Damas (tabuleiro 6x6) com uma Inteligência Artificial robusta baseada no algoritmo **Minimax**, aprimorada com a **Poda Alpha-Beta** e **Simulações de Monte Carlo**.
 
 O sistema foi desenhado de acordo com regras acadêmicas específicas decididas em aula, garantindo um jogo justo, restritivo e com uma IA escalável capaz de jogar do nível mais básico até uma precisão invencível.
