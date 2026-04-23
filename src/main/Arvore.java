@@ -30,13 +30,12 @@ public class Arvore {
         this.corHumano = (corIA == 1) ? 2 : 1;
         this.dificuldadeEscolhida = dificuldadeEscolhida;
         
-        // Mapeamento de dificuldade para nós
-        if (dificuldadeEscolhida <= 1) this.profundidadeCalculada = 0;
-        else if (dificuldadeEscolhida == 2) this.profundidadeCalculada = 1;
-        else if (dificuldadeEscolhida == 3) this.profundidadeCalculada = 2;
-        else if (dificuldadeEscolhida == 4) this.profundidadeCalculada = 4;
-        else if (dificuldadeEscolhida == 9) this.profundidadeCalculada = 12; // Desempenho Original Máximo (12 níveis sem alocação)
-        else this.profundidadeCalculada = dificuldadeEscolhida; // 5 ao 8
+        // Mapeamento linear exato: Dificuldade 1 = Profundidade 1, etc
+        if (dificuldadeEscolhida == 10) {
+            this.profundidadeCalculada = 12; // Modo Máximo (Minimax Puro)
+        } else {
+            this.profundidadeCalculada = dificuldadeEscolhida; // 1 ao 9
+        }
 
         boolean isRaizBranca = (corIA == 1);
         this.raiz = new Node();
@@ -46,27 +45,6 @@ public class Arvore {
         int turnoSendoProcessado = corIA;
         ArrayList<Jogada> jogadasDaRaiz = retornaJogadasPossiveis(tabuleiro, turnoSendoProcessado);
 
-        // -- DIFICULDADE 1: JOGADA 100% ALEATÓRIA --
-        if (dificuldadeEscolhida == 1) {
-            if (!jogadasDaRaiz.isEmpty()) {
-                int rnd = (int)(Math.random() * jogadasDaRaiz.size());
-                Jogada escolhida = jogadasDaRaiz.get(rnd);
-                
-                Tabuleiro tFilho = tabuleiro.clone();
-                aplicarJogadaCompleta(tFilho, escolhida);
-                
-                Node filhoUnico = new Node();
-                filhoUnico.setOrigem(escolhida.getOrigem());
-                filhoUnico.setDest(escolhida.getDestino());
-                filhoUnico.setMatriz(copiarMatriz(tFilho.getMatriz()));
-                filhoUnico.setTurn(!isRaizBranca);
-                filhoUnico.setMiniMax(100);
-                
-                this.raiz.setChildren(filhoUnico);
-                this.raiz.setMiniMax(100);
-            }
-            return; // Encerra, a IA fica totalmente burra no Nível 1
-        }
 
         int bestValue = Integer.MIN_VALUE;
         int alpha = Integer.MIN_VALUE;
@@ -96,25 +74,9 @@ public class Arvore {
         this.raiz.setMiniMax(bestValue);
     }
 
-    /*
-     * private void minMaxJogoDama(Node no){
-     * if(no.getChildren().isEmpty()){
-     * int miniMax = aplicarHeuristicaVitoria
-     * no.setMiniMax(miniMax);
-     * } else if(no.isTurn()){ //turno usuario
-     * 
-     * for(todos os filhos){
-     * if(chid.getMinmax() == Integer.MIN_VALUE){
-     * miniMaxJogoDama(child)
-     * }
-     * }
-     * min = minimo(no.getChildren());
-     * no.setMiniMax(min);
-     * } else {
-     * int max = maximo(no.getChildren());
-     * no.setMiniMax(max);
-     * }
-     */
+
+    //func principal que constroi a arvore de possibilidades
+    //usa a poda alfa-beta pra não gastar memoria calculando jogada que ja sabe que é ruim
     private int alphaBeta(Tabuleiro t, int nivel, int alpha, int beta, boolean isTurnoBrancas, Node noOrigem) {
         int turno = isTurnoBrancas ? 1 : 2;
 
@@ -266,12 +228,10 @@ public class Arvore {
         int SCORE_PECA    = 100;
         int SCORE_DAMA    = 300;
         
-        // Tier 1 (Fácil): Sem bônus geográfico.
-        // Tier 2 e 3 (Médio/Difícil): Bônus geográfico ativado.
-        boolean inteligenciaPosicional = dificuldadeEscolhida >= 4;
-        int SCORE_CENTRO  = inteligenciaPosicional ? 20 : 0;
-        int SCORE_BORDA   = inteligenciaPosicional ? 10 : 0;
-        int SCORE_AVANCO  = inteligenciaPosicional ? 5 : 0;
+        //pontos pra quem chega perto do meio, fica na borda e avança
+        int SCORE_CENTRO  = 20;
+        int SCORE_BORDA   = 10;
+        int SCORE_AVANCO  = 5;
 
         int scoreIA = 0;
         int scoreHumano = 0;
@@ -343,24 +303,23 @@ public class Arvore {
             }
         }
 
-        // Subtração de Forças (O grande Minimax)
+        // Subtração de forças
         int score = scoreIA - scoreHumano;
 
-        // Tier 3 (Impossível): Bônus Dinâmico de Ameaças Fatais (Turnos ativos)
-        if (dificuldadeEscolhida >= 7) {
-            int vezVigente = isTurnoBrancas ? 1 : 2;
-            boolean isVezDaIA = (vezVigente == corIA);
+        // Bônus de captura ou de ameaça
+        int vezVigente = isTurnoBrancas ? 1 : 2;
+        boolean isVezDaIA = (vezVigente == corIA);
 
-            if (isVezDaIA && RegrasDamas.alguemPodeComer(t, corIA)) {
-                score += 50; // Instiga ela a querer capturar nessa rodada
-            } else if (!isVezDaIA && RegrasDamas.alguemPodeComer(t, corHumano)) {
-                score -= 50; // Temor contra a ameaça do humano
-            }
-        }
-
+        if (isVezDaIA && RegrasDamas.alguemPodeComer(t, corIA)) {
+            score += 50; //incentiva a ia a comer se for o turno dela
+        } else if (!isVezDaIA && RegrasDamas.alguemPodeComer(t, corHumano)) {
+            score -= 50; //tira ponto se ela tiver com a propria peça ameaçada pelo humano
+}
         return score;
     }
 
+    //simulacao de monte carlo
+    //ela joga na sorte ate o limite pra prever futuros incertos (nos niveis 1 ao 9)
     private int simulacaoAleatoria(Tabuleiro t, int nivelAtual, boolean isTurnoBrancas) {
         Tabuleiro clone = t.clone();
         int iteracoesAleatorias = 0;

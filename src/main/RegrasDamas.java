@@ -4,9 +4,7 @@ public class RegrasDamas {
 
     private static final int TAMANHO = 6;
 
-    /**
-     * Verifica se alguma peça do jogador da vez pode capturar.
-     */
+    //varre o tabuleiro pra ver se o jogador da vez tem pelo menos uma peça que pode comer
     public static boolean alguemPodeComer(Tabuleiro tabuleiro, int vez) {
         char[][] m = tabuleiro.getMatriz();
         for (int i = 0; i < TAMANHO; i++) {
@@ -21,23 +19,17 @@ public class RegrasDamas {
         return false;
     }
 
-    /**
-     * Verifica se a peça na posição (linha, col) tem alguma captura disponível.
-     * 
-     * @param emSequencia se true, indica que estamos numa sequência de capturas
-     *                    (combo)
-     */
+    //checa se uma peca especifica consegue capturar alguem
+    //o emSequencia é pra saber se a gente ta no meio de um combo de capturas
     public static boolean temCapturaDisponivel(Tabuleiro tabuleiro, int linha, int col, boolean emSequencia) {
         char[][] m = tabuleiro.getMatriz();
         int peca = m[linha][col];
         if (peca == '0' || peca == 'b')
             return false;
 
-        // MUDANÇA: Verificação da Dama reescrita para aceitar regra do combo
         if (peca > '2') {
             if (emSequencia) {
-                // REGRA DA SEQUÊNCIA: Dama só detecta captura se a inimiga estiver logo ali
-                // (Adjacente)
+                //regra da dama: se ela ta no meio de um combo, ela só come quem esta adjascente dela
                 for (int dL : new int[] { -1, 1 }) {
                     for (int dC : new int[] { -1, 1 }) {
                         int rInimigo = linha + dL;
@@ -114,9 +106,7 @@ public class RegrasDamas {
         return false;
     }
 
-    /**
-     * Verifica se o caminho diagonal entre (r1,c1) e (r2,c2) está vazio.
-     */
+    // Verifica se o caminho diagonal entre (r1,c1) e (r2,c2) está vazio.
     public static boolean caminhoVazio(Tabuleiro tabuleiro, int r1, int c1, int r2, int c2) {
         char[][] m = tabuleiro.getMatriz();
         int dirLinha = (r2 > r1) ? 1 : -1;
@@ -135,11 +125,7 @@ public class RegrasDamas {
         return true;
     }
 
-    /**
-     * Tenta realizar uma captura com a dama (distância livre na primeira captura).
-     * Retorna um array {pecaInimigaLinha, pecaInimigaCol} se a captura é válida, ou
-     * null se não.
-     */
+    // Tenta realizar uma captura com a dama (distância livre na primeira captura).
     public static int[] tentarCapturaDama(Tabuleiro tabuleiro, int r1, int c1, int r2, int c2) {
         char[][] m = tabuleiro.getMatriz();
         int dirLinha = (r2 > r1) ? 1 : -1;
@@ -169,8 +155,7 @@ public class RegrasDamas {
             int rAposInimiga = pecaInimigaLinha + dirLinha;
             int cAposInimiga = pecaInimigaCol + dirCol;
 
-            // Mantido intacto porque ele obedece sua regra: A Dama TEM que parar exatamente
-            // após a peça
+            // A Dama TEM que parar exatamente após a peça
             if (r2 == rAposInimiga && c2 == cAposInimiga) {
                 return new int[] { pecaInimigaLinha, pecaInimigaCol };
             }
@@ -178,10 +163,8 @@ public class RegrasDamas {
         return null;
     }
 
-    /**
-     * Verifica se o jogador da vez tem algum movimento ou captura disponível.
-     * Retorna false se o jogador está completamente bloqueado (perde).
-     */
+    // Verifica se o jogador da vez tem algum movimento ou captura disponível.
+    // Retorna false se o jogador está completamente bloqueado (perde).
     public static boolean temMovimentoDisponivel(Tabuleiro tabuleiro, int vez) {
         char[][] m = tabuleiro.getMatriz();
         for (int i = 0; i < TAMANHO; i++) {

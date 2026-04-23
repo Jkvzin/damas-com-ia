@@ -66,7 +66,7 @@ public final class MainInterfaceGrafica extends JFrame {
     }
 
     private void perguntarDificuldade() {
-        Object[] options = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10 (Máximo)"};
+        Object[] options = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "Dificuldade Máxima (10)"};
         
         int escolha = JOptionPane.showOptionDialog(this,
                 "Escolha a Dificuldade da IA (Nível de 1 a 10):",
@@ -78,9 +78,9 @@ public final class MainInterfaceGrafica extends JFrame {
                 options[4]); // Padrão nível 5
 
         if (escolha >= 0) {
-            profundidadeIA = escolha + 1; // Índices vão de 0 a 8, então somamos 1
+            profundidadeIA = escolha + 1;
         } else {
-            profundidadeIA = 5; // Se o usuário fechar a aba
+            profundidadeIA = 5;
         }
     }
 
@@ -193,7 +193,7 @@ public final class MainInterfaceGrafica extends JFrame {
             char origemSelecionada = Arvore.MAPA_LETRAS[linhaOrigem][colOrigem];
             char destinoClicado = Arvore.MAPA_LETRAS[linha][col];
 
-            // Verifica se o destino clicado bate exatamente com o primeiro salto permitido na Lei da Maioria
+            //checa se o clique ta dentro das regras da lei da maioria
             boolean jogadaPermitida = false;
             for (Jogada j : jogadasPermitidas) {
                 if (j.getOrigem() == origemSelecionada && j.getDestino() == destinoClicado) {
@@ -235,7 +235,7 @@ public final class MainInterfaceGrafica extends JFrame {
 
                 // Verifica se pode continuar comendo
                 if (realizouCaptura) {
-                    // Temporariamente marca como sequenciaCaptura e checa as permissões para ver se ainda tem combos pendentes
+                    //marca como sequencia pra travar a peça e buscar os proximos alvos
                     sequenciaCaptura = true;
                     linhaOrigem = linha;
                     colOrigem = col;
