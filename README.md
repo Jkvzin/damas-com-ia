@@ -84,4 +84,4 @@ A simulação de Monte Carlo é uma técnica matemática que utiliza amostragem 
 ## A Dificuldade Máxima (Nível 10)
 
 Para jogadores que querem o desafio final, a Interface disponibiliza a "Dificuldade Máxima (10)". 
-Neste modo, as simulações probabilísticas de Monte Carlo são completamente desativadas. O algoritmo entra no modo **Minimax Puro** acoplado à Poda Alpha-Beta com uma profundidade bruta de **12 nós**. Ele varre matematicamente todas as jogadas e utiliza uma Heurística Posicional agressiva para dominar o centro do tabuleiro, promover damas o mais rápido possível e esmagar o oponente de forma impiedosa e sem erros.
+Neste modo, as simulações probabilísticas de Monte Carlo são completamente desativadas. O algoritmo entra no modo **Minimax Puro** acoplado à Poda Alpha-Beta com uma profundidade bruta de **12 nós** (testei e consigo ir além disso, testei até 16 nós e rodou tranquilo). Ele varre matematicamente todas as jogadas e utiliza uma Heurística Posicional agressiva para dominar o centro do tabuleiro, promover damas o mais rápido possível e esmagar o oponente de forma impiedosa e sem erros.

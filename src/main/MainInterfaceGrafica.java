@@ -423,7 +423,7 @@ public final class MainInterfaceGrafica extends JFrame {
         linhaOrigem = -1;
         colOrigem = -1;
         
-        // Restaura a cor de TODO o tabuleiro para limpar a seleção amarela e os destinos roxos
+        // Restaura a cor do tabuleiro inteiro para limpar a seleção amarela e os destinos roxos
         for (int i = 0; i < TAMANHO; i++) {
             for (int j = 0; j < TAMANHO; j++) {
                 if ((i + j) % 2 == 0) {

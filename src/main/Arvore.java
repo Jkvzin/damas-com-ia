@@ -32,7 +32,7 @@ public class Arvore {
         
         // Mapeamento linear exato: Dificuldade 1 = Profundidade 1, etc
         if (dificuldadeEscolhida == 10) {
-            this.profundidadeCalculada = 12; // Modo Máximo (Minimax Puro)
+            this.profundidadeCalculada = 13; // Modo Máximo (Minimax Puro)
         } else {
             this.profundidadeCalculada = dificuldadeEscolhida; // 1 ao 9
         }
